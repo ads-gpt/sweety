@@ -6,6 +6,8 @@ import { config } from './config.js';
 import authRoutes from './routes/auth.js';
 import readingRoutes from './routes/readings.js';
 import reportRoutes from './routes/reports.js';
+import accountRoutes from './routes/account.js';
+import doctorRoutes from './routes/doctor.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 
 export function createApp() {
@@ -19,7 +21,7 @@ export function createApp() {
   }
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
-  app.use('/api', authRoutes, readingRoutes, reportRoutes);
+  app.use('/api', authRoutes, accountRoutes, readingRoutes, reportRoutes, doctorRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
