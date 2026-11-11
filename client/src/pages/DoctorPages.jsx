@@ -23,7 +23,7 @@ export function DoctorPatients() {
           <ul className="divide-y" aria-label="Patients">
             {data.data.map((p) => (
               <li key={p.id}>
-                <Link to={`/patients/${p.id}`} className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-secondary/60">
+                <Link to={`/patients/${p.id}`} className="flex items-center gap-4 px-6 py-5 transition-colors hover:bg-secondary/60">
                   
                   <div className="min-w-0 flex-1">
                     <p className="font-display text-lg">{p.name}</p>

@@ -24,12 +24,12 @@ export function StatBand({ stats }) {
   return (
     <dl className="grid grid-cols-2 divide-x divide-y rounded-lg border bg-card lg:grid-cols-4 lg:divide-y-0">
       {items.map((it) => (
-        <div key={it.label} className="px-5 py-4">
+        <div key={it.label} className="px-6 py-6">
           <dt className="eyebrow flex items-center gap-1.5">
             {it.color && <span className="size-1.5 rounded-full" style={{ background: it.color }} aria-hidden />}
             {it.label}
           </dt>
-          <dd className="num mt-2 text-[2.5rem] leading-none">
+          <dd className="num mt-3 text-[2.75rem]">
             {it.value}
             {it.unit && <span className="ml-1.5 font-sans text-xs font-medium tracking-normal text-muted-foreground">{it.unit}</span>}
           </dd>
@@ -41,7 +41,7 @@ export function StatBand({ stats }) {
 
 export function EmptyState({ title = 'No readings yet', text, action }) {
   return (
-    <div className="rounded-lg border border-dashed px-6 py-12 sm:px-10">
+    <div className="rounded-lg border border-dashed px-8 py-14 sm:px-12">
       <h3 className="text-2xl">{title}</h3>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">{text}</p>
       {action && <div className="mt-5">{action}</div>}
@@ -60,13 +60,13 @@ export function ReportBody({ report, onAdd }) {
     );
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <StatBand stats={report.stats} />
 
       {report.type !== 'daily' && report.readings.length > 1 && (
-        <section className="rounded-lg border bg-card p-5">
-          <div className="mb-3 flex items-baseline justify-between gap-4">
-            <h3 className="text-lg">Daily average</h3>
+        <section className="rounded-lg border bg-card p-6">
+          <div className="mb-4 flex items-baseline justify-between gap-4">
+            <h3 className="text-xl">Daily average</h3>
             <p className="text-xs text-muted-foreground">Shaded band: 70–180 mg/dl</p>
           </div>
           <ReadingChart readings={report.readings} />
@@ -75,10 +75,10 @@ export function ReportBody({ report, onAdd }) {
 
       {report.type === 'daily' && (
         <section>
-          <h3 className="mb-2 text-lg">Readings</h3>
+          <h3 className="mb-3 text-xl">Readings</h3>
           <ul className="divide-y rounded-lg border bg-card">
             {report.readings.map((r) => (
-              <li key={r.id} className="flex items-center gap-4 px-5 py-3.5">
+              <li key={r.id} className="flex items-center gap-4 px-6 py-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{r.slotLabel}</p>
                   {r.notes && <p className="truncate text-xs text-muted-foreground">{r.notes}</p>}
@@ -102,8 +102,8 @@ export function ReportExplorer({ patientId, onAdd, initialDate }) {
   const tab = REPORT_TABS.find((t) => t.value === type);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <Tabs value={type} onValueChange={setType}>
           <TabsList>
             {REPORT_TABS.map((t) => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}

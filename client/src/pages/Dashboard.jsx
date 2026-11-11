@@ -38,9 +38,9 @@ export default function Dashboard() {
         actions={<Button onClick={() => open()}><Plus />Add reading</Button>}
       />
 
-      <section aria-labelledby="today-heading" className="mb-12">
-        <div className="mb-3 flex items-baseline justify-between">
-          <h2 id="today-heading" className="text-2xl">Today</h2>
+      <section aria-labelledby="today-heading" className="mb-16">
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 id="today-heading" className="text-[1.75rem]">Today</h2>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="flex gap-1" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={MAX_PER_DAY} aria-label="Readings logged today">
               {Array.from({ length: MAX_PER_DAY }, (_, i) => <span key={i} className={cn('h-1 w-5 rounded-full', i < done ? 'bg-foreground' : 'bg-border')} />)}
@@ -57,18 +57,18 @@ export default function Dashboard() {
                 key={s.value} type="button"
                 onClick={() => (r ? open(r) : open(null, { date, slot: s.value }))}
                 aria-label={r ? `Edit ${s.label} reading` : `Add ${s.label} reading`}
-                className="group cursor-pointer px-5 py-4 text-left transition-colors hover:bg-secondary/60"
+                className="group cursor-pointer px-6 py-6 text-left transition-colors hover:bg-secondary/60"
               >
                 <p className="eyebrow">{s.label}</p>
                 {r ? (
                   <>
-                    <p className="num mt-3 text-[2.5rem] leading-none">{r.value}<span className="ml-1.5 font-sans text-xs font-medium tracking-normal text-muted-foreground">mg/dl</span></p>
-                    <Status status={glucoseStatus(r.value)} className="mt-3" />
+                    <p className="num mt-4 text-[2.75rem]">{r.value}<span className="ml-1.5 font-sans text-xs font-medium tracking-normal text-muted-foreground">mg/dl</span></p>
+                    <Status status={glucoseStatus(r.value)} className="mt-4" />
                   </>
                 ) : (
                   <>
-                    <p className="num mt-3 text-[2.5rem] leading-none text-border">—</p>
-                    <p className="mt-3 flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground"><Plus className="size-3" />Add reading</p>
+                    <p className="num mt-4 text-[2.75rem] text-border">—</p>
+                    <p className="mt-4 flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground"><Plus className="size-3" />Add reading</p>
                   </>
                 )}
               </button>
@@ -77,9 +77,9 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section aria-labelledby="mtd-heading" className="space-y-4">
+      <section aria-labelledby="mtd-heading" className="space-y-5">
         <div className="flex items-baseline justify-between">
-          <h2 id="mtd-heading" className="text-2xl">This month so far</h2>
+          <h2 id="mtd-heading" className="text-[1.75rem]">This month so far</h2>
           <Button asChild variant="ghost" size="sm"><Link to="/reports">All reports<ArrowRight /></Link></Button>
         </div>
         {month.loading && !month.data ? (

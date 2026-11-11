@@ -59,8 +59,8 @@ export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () 
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-5" aria-label="Reading form">
-      <div className="grid gap-5 sm:grid-cols-2">
+    <form onSubmit={handleSubmit} noValidate className="space-y-6" aria-label="Reading form">
+      <div className="grid gap-6 sm:grid-cols-2">
         <Field id="reading-date" label="Date" error={errors.date}>
           <Input id="reading-date" type="date" max={todayISO()} value={form.date} onChange={set('date')} invalid={!!errors.date} aria-describedby={errors.date ? 'reading-date-error' : undefined} />
         </Field>

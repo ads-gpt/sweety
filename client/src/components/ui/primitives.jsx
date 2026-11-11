@@ -53,7 +53,7 @@ Label.displayName = 'Label';
 /** Label + control + inline error, wired for accessibility. */
 export function Field({ id, label, error, hint, children }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       {children}
       {error ? (
@@ -69,10 +69,10 @@ export function Field({ id, label, error, hint, children }) {
 export const Card = ({ className, ...props }) => (
   <div className={cn('rounded-lg border bg-card text-card-foreground', className)} {...props} />
 );
-export const CardHeader = ({ className, ...props }) => <div className={cn('flex flex-col gap-1 p-5 pb-2', className)} {...props} />;
+export const CardHeader = ({ className, ...props }) => <div className={cn('flex flex-col gap-1.5 p-6 pb-2', className)} {...props} />;
 export const CardTitle = ({ className, ...props }) => <h3 className={cn('text-lg', className)} {...props} />;
 export const CardDescription = ({ className, ...props }) => <p className={cn('text-sm text-muted-foreground', className)} {...props} />;
-export const CardContent = ({ className, ...props }) => <div className={cn('p-5 pt-3', className)} {...props} />;
+export const CardContent = ({ className, ...props }) => <div className={cn('p-6 pt-3', className)} {...props} />;
 
 /** Small coloured dot + label, e.g. "● In range". Colour carries the meaning; no pill background. */
 export function Status({ status, className }) {

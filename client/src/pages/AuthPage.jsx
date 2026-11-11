@@ -81,12 +81,12 @@ export default function AuthPage() {
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
-      <div className="hidden flex-col justify-between border-r bg-paper-2 p-12 lg:flex">
+      <div className="hidden flex-col justify-between border-r bg-paper-2 p-16 lg:flex">
         <Logo />
         <div className="max-w-lg">
-          <h2 className="text-[3.5rem] leading-[1.02]">A quiet place to keep track of your sugar.</h2>
-          <p className="mt-5 max-w-md text-lg text-muted-foreground">Log up to four readings a day. Sweety turns them into plain daily and monthly summaries you can show your doctor.</p>
-          <div className="mt-12"><DaySketch /></div>
+          <h2 className="text-[3.75rem] leading-[1.02]">A quiet place to keep track of your sugar.</h2>
+          <p className="mt-6 max-w-md text-lg text-muted-foreground">Log up to four readings a day. Sweety turns them into plain daily and monthly summaries you can show your doctor.</p>
+          <div className="mt-16"><DaySketch /></div>
         </div>
         <p className="text-xs text-muted-foreground">Sweety is a tracking aid, not medical advice.</p>
       </div>
@@ -95,17 +95,17 @@ export default function AuthPage() {
         <div className="flex items-center justify-between p-5 lg:justify-end"><Logo className="lg:hidden" /><ThemeToggle /></div>
         <div className="flex flex-1 items-center justify-center px-6 pb-12">
           <div className="w-full max-w-sm">
-            <h1 className="text-4xl">{mode === 'login' ? 'Welcome back' : 'Create an account'}</h1>
-            <p className="mt-2 text-muted-foreground">{mode === 'login' ? 'Sign in to see your readings.' : 'It takes less than a minute.'}</p>
+            <h1 className="text-[2.5rem] leading-[1.05]">{mode === 'login' ? 'Welcome back' : 'Create an account'}</h1>
+            <p className="mt-3 text-muted-foreground">{mode === 'login' ? 'Sign in to see your readings.' : 'It takes less than a minute.'}</p>
 
-            <Tabs value={mode} onValueChange={(m) => { setMode(m); setErrors({}); setFormError(''); }} className="mt-7">
+            <Tabs value={mode} onValueChange={(m) => { setMode(m); setErrors({}); setFormError(''); }} className="mt-8">
               <TabsList className="w-full">
                 <TabsTrigger value="login">Sign in</TabsTrigger>
                 <TabsTrigger value="signup">Sign up</TabsTrigger>
               </TabsList>
             </Tabs>
 
-            <form onSubmit={submit} noValidate className="mt-6 space-y-4" aria-label={mode === 'login' ? 'Sign in' : 'Sign up'}>
+            <form onSubmit={submit} noValidate className="mt-7 space-y-5" aria-label={mode === 'login' ? 'Sign in' : 'Sign up'}>
               {mode === 'signup' && (
                 <>
                   <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
@@ -139,7 +139,7 @@ export default function AuthPage() {
             </form>
 
             {mode === 'login' && (
-              <p className="mt-6 text-center text-xs text-muted-foreground">
+              <p className="mt-8 text-center text-xs text-muted-foreground">
                 Demo accounts:{' '}
                 <button type="button" className="cursor-pointer font-semibold text-foreground underline underline-offset-4" onClick={() => fillDemo('patient')}>patient</button>{' · '}
                 <button type="button" className="cursor-pointer font-semibold text-foreground underline underline-offset-4" onClick={() => fillDemo('doctor')}>doctor</button>

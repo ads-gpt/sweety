@@ -14,12 +14,12 @@ export function DialogContent({ className, children, title, description, ...prop
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
       <DialogPrimitive.Content
         className={cn(
-          'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl outline-none max-h-[90vh] overflow-y-auto',
+          'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-7 shadow-xl outline-none max-h-[90vh] overflow-y-auto',
           className,
         )}
         {...props}
       >
-        <div className="mb-5 space-y-1.5 pr-6">
+        <div className="mb-6 space-y-2 pr-6">
           <DialogPrimitive.Title className="text-xl">{title}</DialogPrimitive.Title>
           <DialogPrimitive.Description className="text-sm text-muted-foreground">{description}</DialogPrimitive.Description>
         </div>

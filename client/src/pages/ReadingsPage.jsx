@@ -47,7 +47,7 @@ export default function ReadingsPage() {
         actions={<Button onClick={() => setDialog({ open: true, reading: null })}><Plus />Add reading</Button>}
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 text-sm font-medium">
           <span className="text-muted-foreground">Filter by date</span>
           <input type="date" value={date} max={todayISO()} aria-label="Filter by date" onChange={(e) => { setDate(e.target.value); setPage(1); }}
@@ -72,7 +72,7 @@ export default function ReadingsPage() {
             {rows.map((r) => {
               const s = glucoseStatus(r.value);
               return (
-                <li key={r.id} className="flex items-center gap-4 px-5 py-4">
+                <li key={r.id} className="flex items-center gap-4 px-6 py-5">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{r.slotLabel}</p>
                     <p className="truncate text-sm text-muted-foreground">{formatDate(r.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}{r.notes ? ` · ${r.notes}` : ''}</p>
@@ -87,7 +87,7 @@ export default function ReadingsPage() {
               );
             })}
           </ul>
-          <div className="flex items-center justify-between border-t px-5 py-3 text-sm">
+          <div className="flex items-center justify-between border-t px-6 py-4 text-sm">
             <span className="text-muted-foreground">Page {pg.page} of {pg.totalPages} · {pg.total} readings</span>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" disabled={pg.page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft />Prev</Button>

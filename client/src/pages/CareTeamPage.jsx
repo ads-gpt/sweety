@@ -35,7 +35,7 @@ export default function CareTeamPage() {
   return (
     <>
       <PageHeader title="Care team" subtitle="Choose which doctors can view your readings and reports. You stay in control and can revoke access any time." />
-      <div className="grid gap-5 lg:grid-cols-5">
+      <div className="grid gap-8 lg:grid-cols-5">
         <Card className="lg:col-span-2 self-start">
           <CardHeader><CardTitle>Share with a doctor</CardTitle><CardDescription>They need a Sweety doctor account.</CardDescription></CardHeader>
           <CardContent>
@@ -54,7 +54,7 @@ export default function CareTeamPage() {
             {loading && !data ? null : data?.data.length ? (
               <ul className="divide-y">
                 {data.data.map((d) => (
-                  <li key={d.id} className="flex items-center gap-3 py-3">
+                  <li key={d.id} className="flex items-center gap-3 py-4">
                     
                     <div className="min-w-0 flex-1"><p className="font-medium">{d.name}</p><p className="truncate text-sm text-muted-foreground">{d.email}</p></div>
                     <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => remove(d)} aria-label={`Stop sharing with ${d.name}`}><Trash2 />Remove</Button>
