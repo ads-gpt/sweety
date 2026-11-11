@@ -1,5 +1,3 @@
-import { config } from '../config.js';
-
 const ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 const pad = (n) => String(n).padStart(2, '0');
 const fmt = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
@@ -13,13 +11,29 @@ export function isValidDate(s) {
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
 }
 
-/** Today's date (YYYY-MM-DD) in the configured timezone. */
-export function today(tz = config.timezone, now = new Date()) {
+export function isValidTimezone(tz) {
+  if (typeof tz !== 'string' || !tz) return false;
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Today's date (YYYY-MM-DD) in the given IANA timezone. */
+export function today(tz = 'UTC', now = new Date()) {
   // en-CA formats as YYYY-MM-DD
   return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 }
 
 export const isFuture = (date, ref = today()) => date > ref;
+
+export function addDays(iso, n) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return dt.toISOString().slice(0, 10);
+}
 
 const parts = (s) => ISO.exec(s).slice(1).map(Number);
 
