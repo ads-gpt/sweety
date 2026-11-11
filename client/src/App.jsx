@@ -7,17 +7,35 @@ import Dashboard from '@/pages/Dashboard';
 import ReadingsPage from '@/pages/ReadingsPage';
 import ReportsPage from '@/pages/ReportsPage';
 import CareTeamPage from '@/pages/CareTeamPage';
+import SettingsPage from '@/pages/SettingsPage';
+import { ForgotPassword, ResetPassword, VerifyEmail } from '@/pages/AccountFlows';
 import { DoctorPatients, DoctorPatientReport } from '@/pages/DoctorPages';
 import { Spinner } from '@/components/ui/primitives';
 
 function Routing() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="grid min-h-dvh place-items-center"><Spinner className="size-8 text-primary" /></div>;
-  if (!user) return <AuthPage />;
+  if (loading) return <div className="grid min-h-dvh place-items-center"><Spinner className="size-8" /></div>;
+
+  // Links from emails work whether or not the visitor is signed in.
+  const open = [
+    <Route key="verify" path="verify-email" element={<VerifyEmail />} />,
+    <Route key="reset" path="reset-password" element={<ResetPassword />} />,
+    <Route key="forgot" path="forgot-password" element={<ForgotPassword />} />,
+  ];
+
+  if (!user) {
+    return (
+      <Routes>
+        {open}
+        <Route path="*" element={<AuthPage />} />
+      </Routes>
+    );
+  }
 
   const isDoctor = user.role === 'doctor';
   return (
     <Routes>
+      <Route path="verify-email" element={<VerifyEmail />} />
       <Route element={<AppShell />}>
         {isDoctor ? (
           <>
@@ -32,6 +50,7 @@ function Routing() {
             <Route path="care-team" element={<CareTeamPage />} />
           </>
         )}
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

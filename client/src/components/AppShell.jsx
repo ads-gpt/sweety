@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, ListChecks, BarChart3, Users, Moon, Sun, HeartHandshake } from 'lucide-react';
+import { LayoutDashboard, ListChecks, BarChart3, Users, Moon, Sun, HeartHandshake, Settings } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/primitives';
 import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 /** Drop with an ECG pulse cut out of it (mask keeps it background-agnostic). */
@@ -47,8 +49,47 @@ const PATIENT_NAV = [
   { to: '/readings', label: 'Readings', icon: ListChecks },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/care-team', label: 'Care team', icon: HeartHandshake },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ];
-const DOCTOR_NAV = [{ to: '/', label: 'My patients', icon: Users, end: true }];
+const DOCTOR_NAV = [
+  { to: '/', label: 'My patients', icon: Users, end: true },
+  { to: '/settings', label: 'Settings', icon: Settings },
+];
+
+/** Slim notices shown above every page: unverified email, doctor approval pending. */
+function Notices() {
+  const { user } = useAuth();
+  const [sending, setSending] = useState(false);
+  const items = [];
+  if (!user.emailVerified) {
+    items.push(
+      <p key="email">
+        Please verify your email address - we sent a link to <strong>{user.email}</strong>.{' '}
+        <button
+          type="button" disabled={sending}
+          className="cursor-pointer font-semibold underline underline-offset-4 disabled:opacity-50"
+          onClick={async () => {
+            setSending(true);
+            try { await api.resendVerification(); toast.success('Verification email sent'); } catch (e) { toast.error(e.message); } finally { setSending(false); }
+          }}
+        >
+          Resend email
+        </button>
+      </p>,
+    );
+  }
+  if (user.role === 'doctor' && user.doctorStatus !== 'verified') {
+    items.push(
+      <p key="doctor">
+        {user.doctorStatus === 'rejected'
+          ? 'Your registration could not be verified, so patients cannot share readings with you.'
+          : <>Your registration <strong>{user.licenseNumber}</strong> is pending verification. Patients can share readings with you once it is approved.</>}
+      </p>,
+    );
+  }
+  if (!items.length) return null;
+  return <div className="mb-8 space-y-2 rounded-md border bg-secondary/60 px-4 py-3 text-sm print:hidden">{items}</div>;
+}
 
 export function AppShell() {
   const { user, logout } = useAuth();
@@ -57,7 +98,7 @@ export function AppShell() {
   return (
     <div className="min-h-dvh">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r bg-paper-2 px-7 py-9 lg:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r bg-paper-2 px-7 py-9 lg:flex print:hidden">
         <Logo className="mb-14" />
         <nav className="flex flex-1 flex-col gap-1" aria-label="Main">
           {nav.map(({ to, label, icon: Icon, end }) => (
@@ -80,7 +121,7 @@ export function AppShell() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background px-4 py-3 lg:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background px-4 py-3 lg:hidden print:hidden">
         <Logo />
         <div className="flex items-center gap-1">
           <ThemeToggle />
@@ -88,12 +129,12 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="px-5 pb-28 pt-9 sm:px-10 lg:ml-64 lg:px-16 lg:pb-24 lg:pt-16">
-        <div className="mx-auto max-w-4xl"><Outlet /></div>
+      <main className="px-5 pb-28 pt-9 sm:px-10 lg:ml-64 lg:px-16 lg:pb-24 lg:pt-16 print:m-0 print:p-0">
+        <div className="mx-auto max-w-4xl"><Notices /><Outlet /></div>
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t bg-background pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Main mobile">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t bg-background pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden" aria-label="Main mobile">
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to} to={to} end={end}

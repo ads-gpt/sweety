@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button, Field, Input } from '@/components/ui/primitives';
@@ -61,7 +62,7 @@ function DaySketch() {
 export default function AuthPage() {
   const { login, signup } = useAuth();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'patient' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'patient', licenseNumber: '' });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -71,6 +72,7 @@ export default function AuthPage() {
   function validate() {
     const e = {};
     if (mode === 'signup' && !form.name.trim()) e.name = 'Please enter your name.';
+    if (mode === 'signup' && form.role === 'doctor' && !form.licenseNumber.trim()) e.licenseNumber = 'Please enter your medical registration number.';
     if (!form.email.trim()) e.email = 'Please enter your email.';
     else if (!EMAIL_RE.test(form.email.trim())) e.email = 'Please enter a valid email address.';
     if (!form.password) e.password = 'Please enter your password.';
@@ -88,7 +90,7 @@ export default function AuthPage() {
       if (mode === 'login') await login({ email: form.email, password: form.password });
       else await signup(form);
     } catch (err) {
-      if (err.field && ['name', 'email', 'password'].includes(err.field)) setErrors({ [err.field]: err.message });
+      if (err.field && ['name', 'email', 'password', 'licenseNumber'].includes(err.field)) setErrors({ [err.field]: err.message });
       else setFormError(err.message);
     } finally {
       setBusy(false);
@@ -149,6 +151,11 @@ export default function AuthPage() {
                   <Field id="name" label="Full name" error={errors.name}>
                     <Input id="name" autoComplete="name" value={form.name} onChange={set('name')} invalid={!!errors.name} placeholder="Jane Doe" />
                   </Field>
+                  <Collapse show={form.role === 'doctor'}>
+                    <Field id="license" label="Medical registration number" error={errors.licenseNumber} hint="We verify this before patients can share readings with you.">
+                      <Input id="license" value={form.licenseNumber} onChange={set('licenseNumber')} invalid={!!errors.licenseNumber} placeholder="e.g. KMC-12345" />
+                    </Field>
+                  </Collapse>
                 </div>
               </Collapse>
               <div className="pb-5">
@@ -162,6 +169,9 @@ export default function AuthPage() {
                 </Field>
                 <Collapse show={mode === 'signup' && !errors.password}>
                   <p className="pt-2 text-xs text-muted-foreground">At least 8 characters.</p>
+                </Collapse>
+                <Collapse show={mode === 'login'}>
+                  <p className="pt-2 text-right text-xs"><Link to="/forgot-password" className="font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground">Forgot password?</Link></p>
                 </Collapse>
               </div>
 
