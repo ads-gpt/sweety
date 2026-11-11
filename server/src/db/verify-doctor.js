@@ -4,6 +4,7 @@
 import { fileURLToPath } from 'node:url';
 import { pool } from './pool.js';
 import { trySendMail } from '../lib/mailer.js';
+import { doctorStatusEmail } from '../lib/emails.js';
 
 export async function setDoctorStatus(email, status) {
   const { rows } = await pool.query(
@@ -11,13 +12,7 @@ export async function setDoctorStatus(email, status) {
     [email, status],
   );
   if (rows[0]) {
-    await trySendMail({
-      to: rows[0].email,
-      subject: status === 'verified' ? 'Your Sweety doctor account is verified' : 'Your Sweety doctor registration was not approved',
-      text: status === 'verified'
-        ? `Hi ${rows[0].name},\n\nYour registration (${rows[0].license_number}) has been verified. Patients can now share their readings with you.`
-        : `Hi ${rows[0].name},\n\nWe could not verify your registration (${rows[0].license_number}).`,
-    });
+    await trySendMail({ to: rows[0].email, ...doctorStatusEmail({ name: rows[0].name, license: rows[0].license_number, verified: status === 'verified' }) });
   }
   return rows[0] ?? null;
 }

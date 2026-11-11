@@ -3,6 +3,7 @@ import { query } from '../db/pool.js';
 import { config } from '../config.js';
 import { MAX_READINGS_PER_DAY } from '../lib/slots.js';
 import { trySendMail } from '../lib/mailer.js';
+import { reminderEmail } from '../lib/emails.js';
 import { sendPush } from '../lib/push.js';
 
 const QUEUE = 'sweety-reminders';
@@ -46,7 +47,7 @@ export async function runReminderJob({ now = new Date(), mail = trySendMail, pus
     const text = `You've logged ${u.logged} of ${MAX_READINGS_PER_DAY} readings today. Take a minute to add the other ${left}.`;
     const channels = [];
     if (u.reminder_email) {
-      await mail({ to: u.email, subject: 'Time to log your glucose', text: `Hi ${u.name},\n\n${text}\n\nOpen Sweety: ${config.appUrl}` });
+      await mail({ to: u.email, ...reminderEmail({ name: u.name, logged: u.logged, total: MAX_READINGS_PER_DAY, url: config.appUrl }) });
       channels.push('email');
     }
     if (u.reminder_push && (await push(u.id, { title: 'Time to log your glucose', body: text, url: '/' })) > 0) channels.push('push');

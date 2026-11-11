@@ -18,9 +18,13 @@ export const config = {
   // How often the reminder job looks for users whose reminder time has arrived.
   reminderCron: env.REMINDER_CRON || '*/10 * * * *',
   reminderIntervalMs: Number(env.REMINDER_INTERVAL_MS) || 10 * 60 * 1000,
-  // Email. Without SMTP_URL, emails are printed to the server console instead of sent.
-  smtpUrl: env.SMTP_URL || '',
-  mailFrom: env.MAIL_FROM || 'Sweety <no-reply@sweety.local>',
+  // Email via the Mailgun HTTP API (same setup as the Vaakya project). The sending domain is taken
+  // from FROM_EMAIL, so it must be an active sending domain on the Mailgun account.
+  // Without MAILGUN_API_KEY, emails are printed to the server console instead of sent.
+  mailgunApiKey: env.MAILGUN_API_KEY || '',
+  mailgunBaseUrl: (env.MAILGUN_BASE_URL || 'https://api.mailgun.net').replace(/\/+$/, ''),
+  fromEmail: env.FROM_EMAIL || 'sweety@mx.adarsh.run',
+  senderName: env.MAILGUN_SENDER_NAME || 'Sweety',
   // Web push (generate with `npm --prefix server run vapid`). Push is disabled when unset.
   vapidPublicKey: env.VAPID_PUBLIC_KEY || '',
   vapidPrivateKey: env.VAPID_PRIVATE_KEY || '',

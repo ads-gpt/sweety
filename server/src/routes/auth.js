@@ -8,17 +8,14 @@ import { signupSchema, loginSchema, forgotSchema, resetSchema, tokenSchema, chan
 import { conflict, unauthorized, badRequest } from '../lib/errors.js';
 import { createToken, consumeToken, HOUR } from '../lib/tokens.js';
 import { trySendMail } from '../lib/mailer.js';
+import { verifyEmail, resetPasswordEmail } from '../lib/emails.js';
 import { getUser, presentUser, USER_COLS } from '../services/users.js';
 
 const router = Router();
 
 async function sendVerificationEmail(user) {
   const token = await createToken(user.id, 'verify', 24 * HOUR);
-  await trySendMail({
-    to: user.email,
-    subject: 'Verify your Sweety email',
-    text: `Hi ${user.name},\n\nConfirm your email address to finish setting up Sweety:\n${config.appUrl}/verify-email?token=${token}\n\nThis link works for 24 hours. If you didn't create an account, you can ignore this email.`,
-  });
+  await trySendMail({ to: user.email, ...verifyEmail({ name: user.name, url: `${config.appUrl}/verify-email?token=${token}` }) });
 }
 
 router.post('/auth/signup', asyncHandler(async (req, res) => {
@@ -72,11 +69,7 @@ router.post('/auth/forgot-password', asyncHandler(async (req, res) => {
   const { rows } = await query('SELECT id, name, email FROM users WHERE lower(email) = $1', [email]);
   if (rows[0]) {
     const token = await createToken(rows[0].id, 'reset', HOUR);
-    await trySendMail({
-      to: rows[0].email,
-      subject: 'Reset your Sweety password',
-      text: `Hi ${rows[0].name},\n\nUse this link to choose a new password:\n${config.appUrl}/reset-password?token=${token}\n\nThe link works for 1 hour. If you didn't ask for this, you can ignore this email.`,
-    });
+    await trySendMail({ to: rows[0].email, ...resetPasswordEmail({ name: rows[0].name, url: `${config.appUrl}/reset-password?token=${token}` }) });
   }
   // Always the same answer so the endpoint can't be used to discover which emails have accounts.
   res.json({ ok: true });

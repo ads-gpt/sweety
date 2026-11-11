@@ -6,6 +6,7 @@ import { commentSchema } from '../lib/validation.js';
 import { forbidden, badRequest } from '../lib/errors.js';
 import { today } from '../lib/dates.js';
 import { trySendMail } from '../lib/mailer.js';
+import { doctorCommentEmail } from '../lib/emails.js';
 import { config } from '../config.js';
 import { listReadings } from '../services/readings.js';
 import { getUser } from '../services/users.js';
@@ -54,11 +55,7 @@ router.post('/doctor/patients/:id/comments', asyncHandler(async (req, res) => {
   const comment = await addComment(req.user.id, patientId, body);
 
   // Let the patient know (best effort; never blocks the response).
-  trySendMail({
-    to: patient.email,
-    subject: `${req.user.name} left a comment on your readings`,
-    text: `Hi ${patient.name},\n\n${req.user.name} commented on ${body.date}:\n\n"${body.body}"\n\nOpen Sweety to see it: ${config.appUrl}`,
-  });
+  trySendMail({ to: patient.email, ...doctorCommentEmail({ name: patient.name, doctorName: req.user.name, date: body.date, body: body.body, url: config.appUrl }) });
   sendPush(patientId, { title: `${req.user.name} commented on your readings`, body: body.body.slice(0, 120), url: '/' }).catch(() => {});
 
   res.status(201).json({ comment });
