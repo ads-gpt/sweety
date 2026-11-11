@@ -97,7 +97,8 @@
     text-wrap: balance;
   }
   p { text-wrap: pretty; }
-  :focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+  [role="tab"]:focus-visible, [role="radio"]:focus-visible { outline: none; }
 }
 
 /* Large figures: serif, lining + tabular numerals */

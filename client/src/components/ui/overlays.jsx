@@ -91,7 +91,7 @@ export const TabsList = ({ className, ...props }) => (
 export const TabsTrigger = ({ className, ...props }) => (
   <TabsPrimitive.Trigger
     className={cn(
-      '-mb-px inline-flex h-10 cursor-pointer items-center justify-center border-b-2 border-transparent text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground',
+      '-mb-px inline-flex h-10 cursor-pointer outline-none focus-visible:text-foreground items-center justify-center border-b-2 border-transparent text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground',
       className,
     )}
     {...props}
