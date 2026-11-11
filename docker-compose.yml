@@ -1,0 +1,46 @@
+# Start everything:        docker compose up --build
+# Only the databases:      docker compose up -d db redis   (then run server/client with npm)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sweety
+      POSTGRES_PASSWORD: sweety
+      POSTGRES_DB: sweety
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sweety -d sweety"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build: ./server
+    environment:
+      DATABASE_URL: postgres://sweety:sweety@db:5432/sweety
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change-me-in-real-deployments
+      CLIENT_ORIGIN: http://localhost:8080
+      PORT: 4000
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports: ["4000:4000"]
+
+  client:
+    build: ./client
+    depends_on: [server]
+    ports: ["8080:80"]
+
+volumes:
+  pgdata:
