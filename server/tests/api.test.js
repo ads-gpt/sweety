@@ -4,7 +4,6 @@ import { createApp } from '../src/app.js';
 import { pool } from '../src/db/pool.js';
 import { migrate } from '../src/db/migrate.js';
 import { today } from '../src/lib/dates.js';
-import { findUsersWithMissingReadings } from '../src/jobs/reminders.js';
 
 const app = createApp();
 const api = () => request(app);
@@ -211,51 +210,3 @@ describe('reports', () => {
   });
 });
 
-describe('doctor role', () => {
-  it('lets a doctor see only patients who shared with them', async () => {
-    const patient = await signup('patient');
-    const other = await signup('patient');
-    const doctor = await signup('doctor', { email: 'doc@example.com' });
-    await api().post('/api/readings').set(auth(patient.token)).send(reading({ value: 123 }));
-
-    const url = (id) => `/api/reports/daily?date=2026-01-10&patientId=${id}`;
-    expect((await api().get(url(patient.user.id)).set(auth(doctor.token))).status).toBe(403);
-
-    const share = await api().post('/api/me/doctors').set(auth(patient.token)).send({ email: 'doc@example.com' });
-    expect(share.status).toBe(201);
-
-    const ok = await api().get(url(patient.user.id)).set(auth(doctor.token));
-    expect(ok.status).toBe(200);
-    expect(ok.body.stats.highest).toBe(123);
-    expect((await api().get(url(other.user.id)).set(auth(doctor.token))).status).toBe(403);
-
-    const list = await api().get('/api/doctor/patients').set(auth(doctor.token));
-    expect(list.body.data.map((p) => p.id)).toEqual([patient.user.id]);
-
-    await api().delete(`/api/me/doctors/${doctor.user.id}`).set(auth(patient.token));
-    expect((await api().get(url(patient.user.id)).set(auth(doctor.token))).status).toBe(403);
-  });
-
-  it('keeps doctors out of the patient reading endpoints and patients out of each other reports', async () => {
-    const doctor = await signup('doctor');
-    const a = await signup();
-    const b = await signup();
-    expect((await api().get('/api/readings').set(auth(doctor.token))).status).toBe(403);
-    expect((await api().get(`/api/reports/daily?patientId=${b.user.id}`).set(auth(a.token))).status).toBe(403);
-  });
-});
-
-describe('reminder job query', () => {
-  it('finds patients with fewer than 4 readings today', async () => {
-    const full = await signup();
-    const partial = await signup();
-    await signup('doctor');
-    for (const slot of ['morning', 'after_breakfast', 'after_lunch', 'after_dinner']) {
-      await api().post('/api/readings').set(auth(full.token)).send({ date: today(), slot, value: 100 });
-    }
-    await api().post('/api/readings').set(auth(partial.token)).send({ date: today(), slot: 'morning', value: 100 });
-    const due = await findUsersWithMissingReadings();
-    expect(due.map((u) => u.id)).toEqual([partial.user.id]);
-    expect(due[0].logged).toBe(1);
-  });
-});

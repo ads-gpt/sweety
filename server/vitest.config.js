@@ -7,6 +7,6 @@ export default defineConfig({
     fileParallelism: false, // integration tests share one database
     testTimeout: 20000,
     hookTimeout: 120000,
-    env: { NODE_ENV: 'test', JWT_SECRET: 'test-secret', APP_TIMEZONE: 'UTC' },
+    env: { NODE_ENV: 'test', JWT_SECRET: 'test-secret' },
   },
 });

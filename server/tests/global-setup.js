@@ -5,6 +5,12 @@ import os from 'node:os';
 import path from 'node:path';
 
 export default async function setup() {
+  // Throwaway VAPID keys so web-push is enabled in tests without committing any secret.
+  const webpush = await import('web-push');
+  const keys = webpush.generateVAPIDKeys();
+  process.env.VAPID_PUBLIC_KEY = keys.publicKey;
+  process.env.VAPID_PRIVATE_KEY = keys.privateKey;
+
   if (process.env.TEST_DATABASE_URL) {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     return;
