@@ -101,7 +101,8 @@ export default function AuthPage() {
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
-      <div className="hidden flex-col gap-16 border-r bg-paper-2 px-16 py-14 lg:flex">
+      {/* Pinned to the viewport height so it never stretches (and re-centres) when the form on the right grows. */}
+      <div className="sticky top-0 hidden h-dvh flex-col gap-16 self-start overflow-hidden border-r bg-paper-2 px-16 py-14 lg:flex">
         <Logo />
         <div className="my-auto max-w-lg py-4">
           <h2 className="text-[clamp(2.75rem,4vw,3.75rem)] leading-[1.04]">A quiet place to keep track of your sugar.</h2>
