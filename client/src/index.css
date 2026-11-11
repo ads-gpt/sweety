@@ -85,30 +85,34 @@
     color: var(--foreground);
     font-family: var(--font-sans);
     font-size: 15px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     font-variant-numeric: tabular-nums;
   }
   h1, h2, h3 {
     font-family: var(--font-display);
-    font-weight: 500;
-    letter-spacing: -0.015em;
-    font-variation-settings: "opsz" 72;
+    font-weight: 420;
+    letter-spacing: -0.022em;
+    font-optical-sizing: auto;
+    text-wrap: balance;
   }
+  p { text-wrap: pretty; }
   :focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
 }
 
 /* Large figures: serif, lining + tabular numerals */
 .num {
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 420;
   font-variant-numeric: lining-nums tabular-nums;
-  letter-spacing: -0.02em;
-  font-variation-settings: "opsz" 96;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-optical-sizing: auto;
 }
 .eyebrow {
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted-foreground);
 }

@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#1c1b17"/><path d="M32 11c8 10 14 17 14 26a14 14 0 0 1-28 0c0-9 6-16 14-26z" fill="#f5f2ea"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .bg{fill:#1c1b17}.drop{fill:#f5f2ea}.pulse{stroke:#1c1b17}
+    @media (prefers-color-scheme:dark){.bg{fill:#eee9dc}.drop{fill:#14130f}.pulse{stroke:#eee9dc}}
+  </style>
+  <rect class="bg" width="64" height="64" rx="15"/>
+  <path class="drop" d="M32 9C32 9 15 28 15 40.5a17 17 0 0 0 34 0C49 28 32 9 32 9z"/>
+  <path class="pulse" d="M20 41h7l4-8 5 15 4-7h5" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
