@@ -32,6 +32,11 @@ services:
       JWT_SECRET: change-me-in-real-deployments
       CLIENT_ORIGIN: http://localhost:8080
       PORT: 4000
+      # Optional: set these in your shell or a .env file next to this compose file
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-sweety@mx.adarsh.run}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
