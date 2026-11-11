@@ -5,7 +5,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Fiel
 import { PageHeader } from '@/components/AppShell';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
-import { browserTimezone } from '@/lib/dates';
+import { browserTimezone, canonicalTimezone } from '@/lib/dates';
 import { DEFAULT_TARGETS, MIN_VALUE, MAX_VALUE } from '@/lib/glucose';
 import { pushSupported, enablePush, disablePush, currentSubscription } from '@/lib/push';
 import { canInstall, isInstalled, isIos, onInstallChange, promptInstall } from '@/lib/pwa';
@@ -60,7 +60,7 @@ function ProfileSection({ user, setUser }) {
   const [busy, setBusy] = useState(false);
   const zones = useMemo(() => {
     const all = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [];
-    return [...new Set(['UTC', ...all, user.timezone, browserTimezone()])].sort();
+    return [...new Set(['UTC', ...all.map(canonicalTimezone), user.timezone, browserTimezone()])].sort();
   }, [user.timezone]);
   const device = browserTimezone();
   const dirty = name.trim() !== user.name || timezone !== user.timezone;

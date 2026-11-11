@@ -91,6 +91,14 @@ export function ResetPassword() {
   );
 }
 
+// The link's token is single-use, and React may run an effect twice (StrictMode / remounts),
+// so share one in-flight request per token instead of spending the token twice.
+const verifyRequests = new Map();
+const verifyOnce = (token) => {
+  if (!verifyRequests.has(token)) verifyRequests.set(token, api.verifyEmail(token));
+  return verifyRequests.get(token);
+};
+
 export function VerifyEmail() {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
@@ -101,7 +109,7 @@ export function VerifyEmail() {
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
-    api.verifyEmail(token)
+    verifyOnce(token)
       .then(async () => { if (!cancelled) { setState('ok'); if (user) await refresh().catch(() => {}); } })
       .catch((err) => { if (!cancelled) { setState('error'); setMessage(err.message); } });
     return () => { cancelled = true; };

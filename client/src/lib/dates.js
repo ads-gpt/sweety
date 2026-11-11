@@ -6,7 +6,14 @@ export const toISO = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() 
 // "Today" follows the signed-in user's own timezone (set from their profile), not the device clock.
 let userTimezone = null;
 export const setTimezone = (tz) => { userTimezone = tz || null; };
-export const browserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+// Browsers sometimes report a zone's old name (e.g. Chrome says Asia/Calcutta). Use the current IANA name.
+const RENAMED_ZONES = {
+  'Asia/Calcutta': 'Asia/Kolkata', 'Asia/Saigon': 'Asia/Ho_Chi_Minh', 'Asia/Katmandu': 'Asia/Kathmandu',
+  'Asia/Rangoon': 'Asia/Yangon', 'Europe/Kiev': 'Europe/Kyiv', 'America/Buenos_Aires': 'America/Argentina/Buenos_Aires',
+  'Atlantic/Faeroe': 'Atlantic/Faroe', 'Pacific/Truk': 'Pacific/Chuuk',
+};
+export const canonicalTimezone = (tz) => RENAMED_ZONES[tz] ?? tz;
+export const browserTimezone = () => canonicalTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
 export const todayISO = (now = new Date(), tz = userTimezone) =>
   tz ? new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now) : toISO(now);
 

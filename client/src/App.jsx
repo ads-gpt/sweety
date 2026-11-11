@@ -36,6 +36,7 @@ function Routing() {
   return (
     <Routes>
       <Route path="verify-email" element={<VerifyEmail />} />
+      <Route path="reset-password" element={<ResetPassword />} />
       <Route element={<AppShell />}>
         {isDoctor ? (
           <>
