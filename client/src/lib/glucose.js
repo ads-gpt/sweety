@@ -1,10 +1,10 @@
 import { todayISO } from './dates.js';
 
 export const SLOTS = [
-  { value: 'morning', label: 'Morning (fasting)', short: 'Morning', emoji: '🌅' },
-  { value: 'after_breakfast', label: 'After breakfast', short: 'Breakfast', emoji: '🥣' },
-  { value: 'after_lunch', label: 'After lunch', short: 'Lunch', emoji: '🍛' },
-  { value: 'after_dinner', label: 'After dinner', short: 'Dinner', emoji: '🌙' },
+  { value: 'morning', label: 'Morning (fasting)', short: 'Morning' },
+  { value: 'after_breakfast', label: 'After breakfast', short: 'Breakfast' },
+  { value: 'after_lunch', label: 'After lunch', short: 'Lunch' },
+  { value: 'after_dinner', label: 'After dinner', short: 'Dinner' },
 ];
 
 export const slotLabel = (v) => SLOTS.find((s) => s.value === v)?.label ?? v;
@@ -17,9 +17,9 @@ export const MAX_PER_DAY = 4;
 export const TARGET = { low: 70, high: 180 };
 
 export function glucoseStatus(value) {
-  if (value < TARGET.low) return { key: 'low', label: 'Low', tone: 'text-low bg-low/12 ring-low/25', color: 'var(--low)' };
-  if (value > TARGET.high) return { key: 'high', label: 'High', tone: 'text-destructive bg-destructive/10 ring-destructive/25', color: 'var(--destructive)' };
-  return { key: 'ok', label: 'In range', tone: 'text-success bg-success/12 ring-success/25', color: 'var(--success)' };
+  if (value < TARGET.low) return { key: 'low', label: 'Low', color: 'var(--low)' };
+  if (value > TARGET.high) return { key: 'high', label: 'High', color: 'var(--high)' };
+  return { key: 'ok', label: 'In range', color: 'var(--success)' };
 }
 
 /**

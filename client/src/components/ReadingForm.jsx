@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Droplets, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button, Field, Input } from '@/components/ui/primitives';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/overlays';
 import { SLOTS, validateReading, glucoseStatus, MIN_VALUE, MAX_VALUE } from '@/lib/glucose';
 import { todayISO } from '@/lib/dates';
-import { cn } from '@/lib/utils';
 
 /**
  * Add / edit form. `onSubmit({date, slot, value, notes})` should return a promise; if it rejects
@@ -73,7 +72,7 @@ export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () 
             <SelectContent>
               {SLOTS.map((s) => (
                 <SelectItem key={s.value} value={s.value}>
-                  <span className="mr-2">{s.emoji}</span>{s.label}{taken.has(s.value) ? '  · logged' : ''}
+                  {s.label}{taken.has(s.value) ? '  · logged' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -86,9 +85,9 @@ export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () 
           <Input
             id="reading-value" type="text" inputMode="numeric" autoComplete="off" placeholder="e.g. 112"
             value={form.value} onChange={set('value')} invalid={!!errors.value}
-            aria-describedby={errors.value ? 'reading-value-error' : undefined} className="pr-24 text-lg font-semibold tabular-nums"
+            aria-describedby={errors.value ? 'reading-value-error' : undefined} className="pr-24 text-base font-semibold"
           />
-          <span className={cn('pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold', preview ? preview.tone.split(' ')[0] : 'text-muted-foreground')}>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold" style={{ color: preview ? preview.color : 'var(--muted-foreground)' }}>
             {preview ? preview.label : 'mg/dl'}
           </span>
         </div>
@@ -102,8 +101,8 @@ export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () 
 
       <div className="flex justify-end gap-2 pt-1">
         {onCancel && <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>}
-        <Button type="submit" variant="brand" disabled={busy}>
-          {busy ? <Loader2 className="animate-spin" /> : <Droplets />}{submitLabel}
+        <Button type="submit" disabled={busy}>
+          {busy && <Loader2 className="animate-spin" />}{submitLabel}
         </Button>
       </div>
     </form>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pencil, Trash2, Plus, ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Card, Badge, Skeleton } from '@/components/ui/primitives';
+import { Button, Card, Status, Skeleton } from '@/components/ui/primitives';
 import { Dialog, DialogContent } from '@/components/ui/overlays';
 import { PageHeader } from '@/components/AppShell';
 import { ReadingDialog } from '@/components/ReadingDialog';
@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ReportView';
 import { useAsync } from '@/hooks/useAsync';
 import { api } from '@/lib/api';
 import { formatDate, todayISO } from '@/lib/dates';
-import { glucoseStatus, SLOTS } from '@/lib/glucose';
+import { glucoseStatus } from '@/lib/glucose';
 
 const PAGE_SIZE = 10;
 
@@ -44,43 +44,41 @@ export default function ReadingsPage() {
       <PageHeader
         title="Readings"
         subtitle="Every measurement you've logged. Edit or delete any of them."
-        actions={<Button variant="brand" onClick={() => setDialog({ open: true, reading: null })}><Plus />Add reading</Button>}
+        actions={<Button onClick={() => setDialog({ open: true, reading: null })}><Plus />Add reading</Button>}
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 text-sm font-medium">
           <span className="text-muted-foreground">Filter by date</span>
           <input type="date" value={date} max={todayISO()} aria-label="Filter by date" onChange={(e) => { setDate(e.target.value); setPage(1); }}
-            className="h-10 rounded-md border border-input bg-card px-3 text-sm shadow-xs focus-visible:border-primary focus-visible:outline-none" />
+            className="h-9 rounded-md border border-input bg-card px-2.5 text-sm focus-visible:border-foreground focus-visible:outline-none" />
         </label>
         {date && <Button variant="ghost" size="sm" onClick={() => { setDate(''); setPage(1); }}><X />Clear</Button>}
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-md bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">{error.message}</p>
+        <p role="alert" className="rounded-md border border-destructive/30 px-4 py-3 text-sm font-medium text-destructive">{error.message}</p>
       ) : loading && !data ? (
         <div className="space-y-2">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-16" />)}</div>
       ) : rows.length === 0 ? (
         <EmptyState
           title={date ? 'No readings on this date' : 'No readings yet'}
           text={date ? 'Pick another date or clear the filter.' : 'Add your first glucose reading to start building your reports.'}
-          action={<Button variant="brand" onClick={() => setDialog({ open: true, reading: null })}>Add a reading</Button>}
+          action={<Button onClick={() => setDialog({ open: true, reading: null })}>Add a reading</Button>}
         />
       ) : (
         <Card className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
           <ul className="divide-y" aria-label="Readings">
             {rows.map((r) => {
               const s = glucoseStatus(r.value);
-              const slot = SLOTS.find((x) => x.value === r.slot);
               return (
                 <li key={r.id} className="flex items-center gap-4 px-5 py-4">
-                  <span className="hidden size-11 place-items-center rounded-xl bg-secondary text-xl sm:grid" aria-hidden>{slot?.emoji}</span>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{r.slotLabel}</p>
                     <p className="truncate text-sm text-muted-foreground">{formatDate(r.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}{r.notes ? ` · ${r.notes}` : ''}</p>
                   </div>
-                  <Badge className={`${s.tone} hidden sm:inline-flex`}>{s.label}</Badge>
-                  <p className="w-24 text-right font-display text-xl font-bold tabular-nums">{r.value}<span className="ml-1 text-xs font-medium text-muted-foreground">mg/dl</span></p>
+                  <Status status={s} className="hidden sm:inline-flex" />
+                  <p className="num w-24 text-right text-2xl">{r.value}<span className="ml-1 font-sans text-xs font-medium tracking-normal text-muted-foreground">mg/dl</span></p>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" aria-label={`Edit ${r.slotLabel} reading on ${r.date}`} onClick={() => setDialog({ open: true, reading: r })}><Pencil /></Button>
                     <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" aria-label={`Delete ${r.slotLabel} reading on ${r.date}`} onClick={() => setToDelete(r)}><Trash2 /></Button>

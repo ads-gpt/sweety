@@ -1,5 +1,5 @@
-import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { TARGET, SLOTS, slotLabel } from '@/lib/glucose';
+import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { TARGET, slotLabel } from '@/lib/glucose';
 import { formatDate, parseISO } from '@/lib/dates';
 
 /** Collapse readings into one point per day (daily average) while keeping each reading for the tooltip. */
@@ -24,43 +24,39 @@ function ChartTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 text-xs shadow-xl">
-      <p className="mb-1 font-semibold">{formatDate(p.date, { weekday: 'short', day: 'numeric', month: 'short' })}</p>
-      <p className="text-muted-foreground">Average <span className="font-semibold text-foreground">{p.avg}</span> mg/dl</p>
-      <ul className="mt-1.5 space-y-0.5">
+    <div className="min-w-44 rounded-md border bg-card px-3 py-2.5 text-xs shadow-lg">
+      <p className="eyebrow mb-1.5">{formatDate(p.date, { weekday: 'short', day: 'numeric', month: 'short' })}</p>
+      <ul className="space-y-1">
         {p.items.map((r) => (
-          <li key={r.id} className="flex justify-between gap-4">
-            <span className="text-muted-foreground">{SLOTS.find((s) => s.value === r.slot)?.short ?? slotLabel(r.slot)}</span>
-            <span className="font-semibold tabular-nums">{r.value}</span>
+          <li key={r.id} className="flex justify-between gap-6">
+            <span className="text-muted-foreground">{slotLabel(r.slot)}</span>
+            <span className="font-semibold">{r.value}</span>
           </li>
         ))}
       </ul>
+      <p className="mt-2 flex justify-between border-t pt-1.5 text-muted-foreground">Average <span className="font-semibold text-foreground">{p.avg}</span></p>
     </div>
   );
 }
 
-export function ReadingChart({ readings, height = 280 }) {
+export function ReadingChart({ readings, height = 260 }) {
   const data = toSeries(readings);
-  const top = Math.max(220, ...data.map((d) => d.max + 20));
+  const top = Math.max(200, ...data.map((d) => d.max + 15));
   const bottom = Math.min(50, ...data.map((d) => d.min - 10));
+  const tick = { fontSize: 11, fill: 'var(--muted-foreground)' };
 
   return (
     <div style={{ height }} role="img" aria-label="Line chart of daily average glucose readings">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 10, right: 8, left: -14, bottom: 0 }}>
-          <defs>
-            <linearGradient id="avgFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 4" />
-          <ReferenceArea y1={TARGET.low} y2={TARGET.high} fill="var(--success)" fillOpacity={0.08} stroke="none" />
-          <XAxis dataKey="date" tickFormatter={(d) => parseISO(d).getDate()} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} minTickGap={12} />
-          <YAxis domain={[bottom, top]} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
-          <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--primary)', strokeOpacity: 0.25 }} />
-          <Area type="monotone" dataKey="avg" stroke="none" fill="url(#avgFill)" isAnimationActive={false} />
-          <Line type="monotone" dataKey="avg" stroke="var(--primary)" strokeWidth={2.5} dot={{ r: 3.5, strokeWidth: 2, fill: 'var(--card)' }} activeDot={{ r: 6 }} />
+        <ComposedChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+          <CartesianGrid vertical={false} stroke="var(--border)" />
+          <ReferenceArea y1={TARGET.low} y2={TARGET.high} fill="var(--success)" fillOpacity={0.09} stroke="none" />
+          <ReferenceLine y={TARGET.high} stroke="var(--success)" strokeOpacity={0.5} strokeDasharray="2 4" />
+          <ReferenceLine y={TARGET.low} stroke="var(--success)" strokeOpacity={0.5} strokeDasharray="2 4" />
+          <XAxis dataKey="date" tickFormatter={(d) => parseISO(d).getDate()} tickLine={false} axisLine={{ stroke: 'var(--border)' }} tick={tick} minTickGap={14} />
+          <YAxis domain={[bottom, top]} tickLine={false} axisLine={false} tick={tick} ticks={[TARGET.low, 100, 140, TARGET.high, 220].filter((t) => t >= bottom && t <= top)} />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--foreground)', strokeOpacity: 0.2 }} />
+          <Line type="linear" dataKey="avg" stroke="var(--foreground)" strokeWidth={1.5} dot={{ r: 2.5, fill: 'var(--foreground)', strokeWidth: 0 }} activeDot={{ r: 4.5, fill: 'var(--foreground)', strokeWidth: 0 }} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>

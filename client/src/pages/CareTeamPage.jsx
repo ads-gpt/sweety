@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Stethoscope, UserPlus, Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input } from '@/components/ui/primitives';
 import { PageHeader } from '@/components/AppShell';
@@ -43,7 +43,7 @@ export default function CareTeamPage() {
               <Field id="doctor-email" label="Doctor's email" error={error}>
                 <Input id="doctor-email" type="email" placeholder="doctor@clinic.com" value={email} invalid={!!error} onChange={(e) => { setEmail(e.target.value); setError(''); }} />
               </Field>
-              <Button type="submit" variant="brand" className="w-full" disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <UserPlus />}Share my reports</Button>
+              <Button type="submit" className="w-full" disabled={busy}>{busy && <Loader2 className="animate-spin" />}Share my reports</Button>
             </form>
           </CardContent>
         </Card>
@@ -55,7 +55,7 @@ export default function CareTeamPage() {
               <ul className="divide-y">
                 {data.data.map((d) => (
                   <li key={d.id} className="flex items-center gap-3 py-3">
-                    <span className="grid size-10 place-items-center rounded-full bg-secondary text-primary"><Stethoscope className="size-5" /></span>
+                    
                     <div className="min-w-0 flex-1"><p className="font-medium">{d.name}</p><p className="truncate text-sm text-muted-foreground">{d.email}</p></div>
                     <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => remove(d)} aria-label={`Stop sharing with ${d.name}`}><Trash2 />Remove</Button>
                   </li>
