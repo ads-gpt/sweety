@@ -11,16 +11,16 @@ export const Dialog = DialogPrimitive.Root;
 export function DialogContent({ className, children, title, description, ...props }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
       <DialogPrimitive.Content
         className={cn(
-          'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-card p-6 shadow-2xl outline-none max-h-[90vh] overflow-y-auto',
+          'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card p-6 shadow-xl outline-none max-h-[90vh] overflow-y-auto',
           className,
         )}
         {...props}
       >
         <div className="mb-5 space-y-1.5 pr-6">
-          <DialogPrimitive.Title className="text-lg font-semibold">{title}</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="text-xl">{title}</DialogPrimitive.Title>
           <DialogPrimitive.Description className="text-sm text-muted-foreground">{description}</DialogPrimitive.Description>
         </div>
         {children}
@@ -40,7 +40,7 @@ export const SelectTrigger = React.forwardRef(({ className, children, invalid, .
     ref={ref}
     aria-invalid={invalid || undefined}
     className={cn(
-      'flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-card px-3.5 text-sm shadow-xs transition-shadow focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:outline-none data-[placeholder]:text-muted-foreground/70',
+      'flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-card px-3 text-sm transition-colors focus-visible:border-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none data-[placeholder]:text-muted-foreground/70',
       invalid && 'border-destructive',
       className,
     )}
@@ -60,7 +60,7 @@ export function SelectContent({ className, children, ...props }) {
       <SelectPrimitive.Content
         position="popper"
         sideOffset={6}
-        className={cn('z-[60] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border bg-card p-1 shadow-xl', className)}
+        className={cn('z-[60] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border bg-card p-1 shadow-lg', className)}
         {...props}
       >
         <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>
@@ -76,7 +76,7 @@ export const SelectItem = React.forwardRef(({ className, children, ...props }, r
     {...props}
   >
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-    <SelectPrimitive.ItemIndicator className="absolute right-2.5"><Check className="size-4 text-primary" /></SelectPrimitive.ItemIndicator>
+    <SelectPrimitive.ItemIndicator className="absolute right-2.5"><Check className="size-4" /></SelectPrimitive.ItemIndicator>
   </SelectPrimitive.Item>
 ));
 SelectItem.displayName = 'SelectItem';
@@ -85,13 +85,13 @@ SelectItem.displayName = 'SelectItem';
 export const Tabs = TabsPrimitive.Root;
 
 export const TabsList = ({ className, ...props }) => (
-  <TabsPrimitive.List className={cn('inline-flex h-11 items-center gap-1 rounded-lg bg-muted p-1', className)} {...props} />
+  <TabsPrimitive.List className={cn('inline-flex items-center gap-6 border-b', className)} {...props} />
 );
 
 export const TabsTrigger = ({ className, ...props }) => (
   <TabsPrimitive.Trigger
     className={cn(
-      'inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3.5 text-sm font-medium text-muted-foreground transition-all data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm',
+      '-mb-px inline-flex h-10 cursor-pointer items-center justify-center border-b-2 border-transparent text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground',
       className,
     )}
     {...props}
