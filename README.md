@@ -122,7 +122,7 @@ docs/    screenshots
 - **Whole numbers only:** decimals such as `100.5` are rejected with "Value must be a whole number between 40 and 600 mg/dl.", out-of-range values with the exact message from the brief.
 - **Rule order:** if a day already has 4 readings the "only 4 readings per day" message wins over the "slot already used" one. Since there are exactly 4 slots, the cap is also guaranteed by a unique `(user, date, slot)` constraint; creation is serialised with a per-user-per-day advisory lock so concurrent requests can't bypass it.
 - **Doctor role:** anyone can choose "Doctor" at sign-up (there is no verification). Access is **patient-initiated**: a doctor sees only patients who added the doctor's email under *Care team*, and can revoke it any time. Doctors have read-only access.
-- **Reference range** (70–180 mg/dl, used for the Low / In range / High badges and chart band) is a common general guideline shown for convenience only; it is not medical advice and is not configurable yet.
+- **Reference range** (70–180 mg/dl, used for the Low / In range / High badges and chart band) is a common general guideline shown for convenience only and is not configurable yet.
 - **bcrypt:** uses `bcryptjs` (pure JS, same hash format) to avoid native build problems on Windows.
 - **Reminders** are only *logged* (no email/SMS is sent). They need Redis; without `REDIS_URL` the job and cache are silently disabled.
 - Tokens are stored in `localStorage` for simplicity.

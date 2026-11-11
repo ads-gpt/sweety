@@ -81,14 +81,13 @@ export default function AuthPage() {
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
-      <div className="hidden flex-col justify-between gap-16 border-r bg-paper-2 px-16 py-14 lg:flex">
+      <div className="hidden flex-col gap-16 border-r bg-paper-2 px-16 py-14 lg:flex">
         <Logo />
-        <div className="max-w-lg py-4">
+        <div className="my-auto max-w-lg py-4">
           <h2 className="text-[clamp(2.75rem,4vw,3.75rem)] leading-[1.04]">A quiet place to keep track of your sugar.</h2>
           <p className="mt-7 max-w-md text-lg leading-relaxed text-muted-foreground">Log up to four readings a day. Sweety turns them into plain daily and monthly summaries you can show your doctor.</p>
           <div className="mt-14 hidden [@media(min-height:800px)]:block"><DaySketch /></div>
         </div>
-        <p className="text-xs text-muted-foreground">Sweety is a tracking aid, not medical advice.</p>
       </div>
 
       <div className="flex flex-col">
