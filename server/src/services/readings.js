@@ -3,7 +3,7 @@ import { SLOTS, MAX_READINGS_PER_DAY } from '../lib/slots.js';
 import { conflict, notFound } from '../lib/errors.js';
 import { invalidateReports } from '../lib/cache.js';
 
-const COLS = 'id, user_id, reading_date AS date, slot, value, notes, created_at, updated_at';
+const COLS = 'id, user_id, reading_date AS date, slot, value, notes, tags, created_at, updated_at';
 const SLOT_ORDER = `CASE slot WHEN 'morning' THEN 1 WHEN 'after_breakfast' THEN 2 WHEN 'after_lunch' THEN 3 ELSE 4 END`;
 const present = (row) => ({ ...row, slotLabel: SLOTS[row.slot] });
 
@@ -33,12 +33,18 @@ async function withDayLock(userId, date, fn) {
   }
 }
 
-export async function listReadings(userId, { page = 1, limit = 20, from, to, date } = {}) {
+export async function listReadings(userId, { page = 1, limit = 20, from, to, date, tag, q } = {}) {
   const where = ['user_id = $1'];
   const params = [userId];
   if (date) { params.push(date); where.push(`reading_date = $${params.length}`); }
   if (from) { params.push(from); where.push(`reading_date >= $${params.length}`); }
   if (to) { params.push(to); where.push(`reading_date <= $${params.length}`); }
+  if (tag) { params.push(tag); where.push(`$${params.length} = ANY(tags)`); }
+  if (q) {
+    // Escape LIKE wildcards so a search for "50%" matches literally.
+    params.push(`%${q.replace(/[\\%_]/g, '\\$&')}%`);
+    where.push(`notes ILIKE $${params.length}`);
+  }
   const clause = where.join(' AND ');
 
   const total = Number((await query(`SELECT COUNT(*) FROM readings WHERE ${clause}`, params)).rows[0].count);
@@ -61,7 +67,7 @@ export async function getReading(userId, id) {
   return present(rows[0]);
 }
 
-export async function createReading(userId, { date, slot, value, notes }) {
+export async function createReading(userId, { date, slot, value, notes, tags = [] }) {
   const created = await withDayLock(userId, date, async (db) => {
     const { rows: existing } = await db.query(
       'SELECT slot FROM readings WHERE user_id = $1 AND reading_date = $2',
@@ -70,8 +76,8 @@ export async function createReading(userId, { date, slot, value, notes }) {
     if (existing.length >= MAX_READINGS_PER_DAY) throw dayFull();
     if (existing.some((r) => r.slot === slot)) throw slotConflict(slot);
     const { rows } = await db.query(
-      `INSERT INTO readings (user_id, reading_date, slot, value, notes) VALUES ($1,$2,$3,$4,$5) RETURNING ${COLS}`,
-      [userId, date, slot, value, notes ?? null],
+      `INSERT INTO readings (user_id, reading_date, slot, value, notes, tags) VALUES ($1,$2,$3,$4,$5,$6) RETURNING ${COLS}`,
+      [userId, date, slot, value, notes ?? null, tags],
     );
     return rows[0];
   });
@@ -79,7 +85,7 @@ export async function createReading(userId, { date, slot, value, notes }) {
   return present(created);
 }
 
-export async function updateReading(userId, id, { date, slot, value, notes }) {
+export async function updateReading(userId, id, { date, slot, value, notes, tags = [] }) {
   const current = await getReading(userId, id);
   const updated = await withDayLock(userId, date, async (db) => {
     const { rows: clash } = await db.query(
@@ -96,9 +102,9 @@ export async function updateReading(userId, id, { date, slot, value, notes }) {
       if (n[0].c >= MAX_READINGS_PER_DAY) throw dayFull();
     }
     const { rows } = await db.query(
-      `UPDATE readings SET reading_date=$1, slot=$2, value=$3, notes=$4, updated_at=now()
-       WHERE id=$5 AND user_id=$6 RETURNING ${COLS}`,
-      [date, slot, value, notes ?? null, id, userId],
+      `UPDATE readings SET reading_date=$1, slot=$2, value=$3, notes=$4, tags=$5, updated_at=now()
+       WHERE id=$6 AND user_id=$7 RETURNING ${COLS}`,
+      [date, slot, value, notes ?? null, tags, id, userId],
     );
     return rows[0];
   });
