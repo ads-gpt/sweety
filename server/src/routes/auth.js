@@ -1,24 +1,38 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { query } from '../db/pool.js';
+import { config } from '../config.js';
 import { asyncHandler, parse } from '../middleware/error.js';
-import { signToken, requireAuth, requireRole } from '../middleware/auth.js';
-import { signupSchema, loginSchema, emailSchema } from '../lib/validation.js';
-import { conflict, unauthorized, notFound, badRequest } from '../lib/errors.js';
+import { signToken, requireAuth } from '../middleware/auth.js';
+import { signupSchema, loginSchema, forgotSchema, resetSchema, tokenSchema, changePasswordSchema } from '../lib/validation.js';
+import { conflict, unauthorized, badRequest } from '../lib/errors.js';
+import { createToken, consumeToken, HOUR } from '../lib/tokens.js';
+import { trySendMail } from '../lib/mailer.js';
+import { getUser, presentUser, USER_COLS } from '../services/users.js';
 
 const router = Router();
 
-const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role });
+async function sendVerificationEmail(user) {
+  const token = await createToken(user.id, 'verify', 24 * HOUR);
+  await trySendMail({
+    to: user.email,
+    subject: 'Verify your Sweety email',
+    text: `Hi ${user.name},\n\nConfirm your email address to finish setting up Sweety:\n${config.appUrl}/verify-email?token=${token}\n\nThis link works for 24 hours. If you didn't create an account, you can ignore this email.`,
+  });
+}
 
 router.post('/auth/signup', asyncHandler(async (req, res) => {
-  const { name, email, password, role } = parse(signupSchema, req.body);
+  const { name, email, password, role, timezone, licenseNumber } = parse(signupSchema, req.body);
   const hash = await bcrypt.hash(password, 10);
   try {
     const { rows } = await query(
-      'INSERT INTO users (name, email, password_hash, role) VALUES ($1,$2,$3,$4) RETURNING id, name, email, role',
-      [name, email, hash, role],
+      `INSERT INTO users (name, email, password_hash, role, timezone, license_number, doctor_status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING ${USER_COLS}`,
+      [name, email, hash, role, timezone ?? config.defaultTimezone, role === 'doctor' ? licenseNumber : null, role === 'doctor' ? 'pending' : null],
     );
-    res.status(201).json({ user: publicUser(rows[0]), token: signToken(rows[0]) });
+    // Awaited so the email is queued before we respond; a mail failure is logged, never thrown.
+    await sendVerificationEmail(rows[0]).catch((e) => console.error('[mail] verification failed:', e.message));
+    res.status(201).json({ user: presentUser(rows[0]), token: signToken(rows[0]) });
   } catch (err) {
     if (err.code === '23505') throw conflict('An account with this email already exists.', { field: 'email', code: 'EMAIL_TAKEN' });
     throw err;
@@ -27,43 +41,65 @@ router.post('/auth/signup', asyncHandler(async (req, res) => {
 
 router.post('/auth/login', asyncHandler(async (req, res) => {
   const { email, password } = parse(loginSchema, req.body);
-  const { rows } = await query('SELECT * FROM users WHERE lower(email) = $1', [email]);
-  const user = rows[0];
+  const { rows } = await query('SELECT id, password_hash FROM users WHERE lower(email) = $1', [email]);
   // Same message for unknown email and wrong password (no account enumeration).
-  const ok = user && (await bcrypt.compare(password, user.password_hash));
+  const ok = rows[0] && (await bcrypt.compare(password, rows[0].password_hash));
   if (!ok) throw unauthorized('Incorrect email or password.');
-  res.json({ user: publicUser(user), token: signToken(user) });
+  const user = await getUser(rows[0].id);
+  res.json({ user: presentUser(user), token: signToken(user) });
 }));
 
-router.get('/auth/me', requireAuth, asyncHandler(async (req, res) => {
-  const { rows } = await query('SELECT id, name, email, role FROM users WHERE id = $1', [req.user.id]);
-  if (!rows[0]) throw unauthorized();
-  res.json({ user: publicUser(rows[0]) });
+router.get('/auth/me', requireAuth, (req, res) => res.json({ user: presentUser(req.user) }));
+
+// ---- Email verification ----
+router.post('/auth/verify-email', asyncHandler(async (req, res) => {
+  const { token } = parse(tokenSchema, req.body);
+  const userId = await consumeToken(token, 'verify');
+  if (!userId) throw badRequest('This verification link is invalid or has expired.', { code: 'BAD_TOKEN' });
+  await query('UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1', [userId]);
+  res.json({ ok: true });
 }));
 
-// ---- Care team: a patient chooses which doctors can see their data ----
-router.get('/me/doctors', requireAuth, requireRole('patient'), asyncHandler(async (req, res) => {
-  const { rows } = await query(
-    `SELECT u.id, u.name, u.email FROM doctor_patients dp JOIN users u ON u.id = dp.doctor_id
-     WHERE dp.patient_id = $1 ORDER BY u.name`,
-    [req.user.id],
-  );
-  res.json({ data: rows });
+router.post('/auth/resend-verification', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.email_verified_at) return res.json({ ok: true, alreadyVerified: true });
+  await sendVerificationEmail(req.user);
+  res.json({ ok: true });
 }));
 
-router.post('/me/doctors', requireAuth, requireRole('patient'), asyncHandler(async (req, res) => {
-  const { email } = parse(emailSchema, req.body);
-  const { rows } = await query(`SELECT id, name, email FROM users WHERE lower(email) = $1 AND role = 'doctor'`, [email]);
-  if (!rows[0]) throw notFound('No doctor account found with that email.');
-  await query('INSERT INTO doctor_patients (doctor_id, patient_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [rows[0].id, req.user.id]);
-  res.status(201).json({ doctor: rows[0] });
+// ---- Password reset ----
+router.post('/auth/forgot-password', asyncHandler(async (req, res) => {
+  const { email } = parse(forgotSchema, req.body);
+  const { rows } = await query('SELECT id, name, email FROM users WHERE lower(email) = $1', [email]);
+  if (rows[0]) {
+    const token = await createToken(rows[0].id, 'reset', HOUR);
+    await trySendMail({
+      to: rows[0].email,
+      subject: 'Reset your Sweety password',
+      text: `Hi ${rows[0].name},\n\nUse this link to choose a new password:\n${config.appUrl}/reset-password?token=${token}\n\nThe link works for 1 hour. If you didn't ask for this, you can ignore this email.`,
+    });
+  }
+  // Always the same answer so the endpoint can't be used to discover which emails have accounts.
+  res.json({ ok: true });
 }));
 
-router.delete('/me/doctors/:id', requireAuth, requireRole('patient'), asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) throw badRequest('Invalid doctor id.');
-  await query('DELETE FROM doctor_patients WHERE doctor_id = $1 AND patient_id = $2', [id, req.user.id]);
-  res.status(204).end();
+router.post('/auth/reset-password', asyncHandler(async (req, res) => {
+  const { token, password } = parse(resetSchema, req.body);
+  const userId = await consumeToken(token, 'reset');
+  if (!userId) throw badRequest('This reset link is invalid or has expired.', { code: 'BAD_TOKEN' });
+  await query('UPDATE users SET password_hash = $1 WHERE id = $2', [await bcrypt.hash(password, 10), userId]);
+  // Whoever held the reset email owns the inbox, so also treat the address as verified.
+  await query('UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1', [userId]);
+  res.json({ ok: true });
+}));
+
+router.post('/auth/change-password', requireAuth, asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = parse(changePasswordSchema, req.body);
+  const { rows } = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+  if (!(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+    throw badRequest('Your current password is incorrect.', { field: 'currentPassword' });
+  }
+  await query('UPDATE users SET password_hash = $1 WHERE id = $2', [await bcrypt.hash(newPassword, 10), req.user.id]);
+  res.json({ ok: true });
 }));
 
 export default router;
