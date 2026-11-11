@@ -116,3 +116,11 @@
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
+
+/* Print / "Save as PDF": clean white page, no app chrome. */
+@media print {
+  @page { margin: 16mm; }
+  :root { --background: #fff; --card: #fff; --foreground: #111; --muted-foreground: #555; --border: #ccc; }
+  body { background: #fff; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

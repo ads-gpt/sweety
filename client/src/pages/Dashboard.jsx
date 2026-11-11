@@ -4,18 +4,13 @@ import { Plus, ArrowRight } from 'lucide-react';
 import { Button, Skeleton, Status } from '@/components/ui/primitives';
 import { PageHeader } from '@/components/AppShell';
 import { ReadingDialog } from '@/components/ReadingDialog';
-import { ReportBody } from '@/components/ReportView';
+import { ReportBody, CommentList } from '@/components/ReportView';
 import { useAuth } from '@/hooks/useAuth';
 import { useAsync } from '@/hooks/useAsync';
 import { api } from '@/lib/api';
-import { SLOTS, glucoseStatus, MAX_PER_DAY } from '@/lib/glucose';
+import { SLOTS, statusMeta, MAX_PER_DAY } from '@/lib/glucose';
 import { todayISO, formatDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
-
-const greeting = () => {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-};
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -24,17 +19,22 @@ export default function Dashboard() {
 
   const day = useAsync(() => api.report('daily', { date }), [date]);
   const month = useAsync(() => api.report('month-to-date', { date }), [date]);
+  const notes = useAsync(() => api.myComments(3), []);
   const refresh = () => { day.reload(); month.reload(); };
 
   const bySlot = Object.fromEntries((day.data?.readings ?? []).map((r) => [r.slot, r]));
   const done = day.data?.readings.length ?? 0;
   const open = (reading = null, preset = null) => setDialog({ open: true, reading, preset });
 
+  // Greeting follows the hour in the user's own timezone.
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hour12: false, timeZone: user.timezone }).format(new Date())) % 24;
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
     <>
       <PageHeader
         eyebrow={formatDate(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        title={`${greeting()}, ${user.name.split(' ')[0]}`}
+        title={`${greeting}, ${user.name.split(' ')[0]}`}
         actions={<Button onClick={() => open()}><Plus />Add reading</Button>}
       />
 
@@ -63,7 +63,7 @@ export default function Dashboard() {
                 {r ? (
                   <>
                     <p className="num mt-4 text-[2.75rem]">{r.value}<span className="ml-1.5 font-sans text-xs font-medium tracking-normal text-muted-foreground">mg/dl</span></p>
-                    <Status status={glucoseStatus(r.value)} className="mt-4" />
+                    <Status status={statusMeta(r.status)} className="mt-4" />
                   </>
                 ) : (
                   <>
@@ -77,6 +77,10 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {notes.data?.data.length > 0 && (
+        <div className="mb-16"><CommentList comments={notes.data.data} title="From your doctor" /></div>
+      )}
+
       <section aria-labelledby="mtd-heading" className="space-y-5">
         <div className="flex items-baseline justify-between">
           <h2 id="mtd-heading" className="text-[1.75rem]">This month so far</h2>
@@ -87,7 +91,7 @@ export default function Dashboard() {
         ) : month.error ? (
           <p role="alert" className="text-sm font-medium text-destructive">{month.error.message}</p>
         ) : (
-          <ReportBody report={{ ...month.data, type: 'month-to-date' }} onAdd={() => open()} />
+          <ReportBody report={{ ...month.data, type: 'month-to-date' }} onAdd={() => open()} showComments={false} />
         )}
       </section>
 

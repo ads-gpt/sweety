@@ -1,5 +1,5 @@
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { TARGET, slotLabel } from '@/lib/glucose';
+import { DEFAULT_TARGETS, slotLabel } from '@/lib/glucose';
 import { formatDate, parseISO } from '@/lib/dates';
 
 /** Collapse readings into one point per day (daily average) while keeping each reading for the tooltip. */
@@ -39,7 +39,9 @@ function ChartTooltip({ active, payload }) {
   );
 }
 
-export function ReadingChart({ readings, height = 260 }) {
+export function ReadingChart({ readings, targets = DEFAULT_TARGETS, height = 260 }) {
+  const low = targets.postLow;
+  const high = targets.postHigh;
   const data = toSeries(readings);
   const top = Math.max(200, ...data.map((d) => d.max + 15));
   const bottom = Math.min(50, ...data.map((d) => d.min - 10));
@@ -50,11 +52,11 @@ export function ReadingChart({ readings, height = 260 }) {
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="var(--border)" />
-          <ReferenceArea y1={TARGET.low} y2={TARGET.high} fill="var(--success)" fillOpacity={0.09} stroke="none" />
-          <ReferenceLine y={TARGET.high} stroke="var(--success)" strokeOpacity={0.5} strokeDasharray="2 4" />
-          <ReferenceLine y={TARGET.low} stroke="var(--success)" strokeOpacity={0.5} strokeDasharray="2 4" />
+          <ReferenceArea y1={low} y2={high} fill="var(--success)" fillOpacity={0.09} stroke="none" />
+          <ReferenceLine y={high} stroke="var(--success)" strokeOpacity={0.5} strokeDasharray="2 4" />
+          <ReferenceLine y={low} stroke="var(--success)" strokeOpacity={0.5} strokeDasharray="2 4" />
           <XAxis dataKey="date" tickFormatter={(d) => parseISO(d).getDate()} tickLine={false} axisLine={{ stroke: 'var(--border)' }} tick={tick} minTickGap={14} />
-          <YAxis domain={[bottom, top]} tickLine={false} axisLine={false} tick={tick} ticks={[TARGET.low, 100, 140, TARGET.high, 220].filter((t) => t >= bottom && t <= top)} />
+          <YAxis domain={[bottom, top]} tickLine={false} axisLine={false} tick={tick} ticks={[low, 100, 140, high, 220].filter((t) => t >= bottom && t <= top)} />
           <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--foreground)', strokeOpacity: 0.2 }} />
           <Line type="linear" dataKey="avg" stroke="var(--foreground)" strokeWidth={1.5} dot={{ r: 2.5, fill: 'var(--foreground)', strokeWidth: 0 }} activeDot={{ r: 4.5, fill: 'var(--foreground)', strokeWidth: 0 }} isAnimationActive={false} />
         </ComposedChart>
