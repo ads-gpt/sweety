@@ -1,21 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { Button, Field, Input } from '@/components/ui/primitives';
+import { Button, Field, Input, Label } from '@/components/ui/primitives';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/overlays';
-import { SLOTS, validateReading, glucoseStatus, MIN_VALUE, MAX_VALUE } from '@/lib/glucose';
+import { TagPicker } from '@/components/Tags';
+import { useTargets } from '@/hooks/useAuth';
+import { SLOTS, validateReading, glucoseStatus, rangeFor, MIN_VALUE, MAX_VALUE } from '@/lib/glucose';
 import { todayISO } from '@/lib/dates';
 
 /**
- * Add / edit form. `onSubmit({date, slot, value, notes})` should return a promise; if it rejects
+ * Add / edit form. `onSubmit({date, slot, value, notes, tags})` should return a promise; if it rejects
  * with an ApiError carrying a `field`, the message is shown next to that field.
  * `existingForDate(date)` returns the readings already saved on that day (for instant duplicate/limit feedback).
  */
 export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () => [], submitLabel = 'Save reading' }) {
+  const targets = useTargets();
   const [form, setForm] = useState({
     date: initial?.date ?? todayISO(),
     slot: initial?.slot ?? '',
     value: initial?.value != null ? String(initial.value) : '',
     notes: initial?.notes ?? '',
+    tags: initial?.tags ?? [],
   });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
@@ -40,7 +44,9 @@ export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () 
   }, [form.date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const numeric = Number(form.value);
-  const preview = form.value !== '' && Number.isInteger(numeric) && numeric >= MIN_VALUE && numeric <= MAX_VALUE ? glucoseStatus(numeric) : null;
+  const valid = form.value !== '' && Number.isInteger(numeric) && numeric >= MIN_VALUE && numeric <= MAX_VALUE;
+  const preview = valid ? glucoseStatus(numeric, form.slot || 'after_lunch', targets) : null;
+  const range = form.slot ? rangeFor(form.slot, targets) : null;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -49,9 +55,9 @@ export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () 
     if (Object.keys(found).length) return;
     setBusy(true);
     try {
-      await onSubmit({ date: form.date, slot: form.slot, value: Number(form.value), notes: form.notes.trim() || null });
+      await onSubmit({ date: form.date, slot: form.slot, value: Number(form.value), notes: form.notes.trim() || null, tags: form.tags });
     } catch (err) {
-      if (err.field && ['date', 'slot', 'value', 'notes'].includes(err.field)) setErrors({ [err.field]: err.message });
+      if (err.field && ['date', 'slot', 'value', 'notes', 'tags'].includes(err.field)) setErrors({ [err.field]: err.message });
       else setFormError(err.message);
     } finally {
       setBusy(false);
@@ -71,16 +77,17 @@ export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () 
             </SelectTrigger>
             <SelectContent>
               {SLOTS.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}{taken.has(s.value) ? '  · logged' : ''}
-                </SelectItem>
+                <SelectItem key={s.value} value={s.value}>{s.label}{taken.has(s.value) ? '  · logged' : ''}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
       </div>
 
-      <Field id="reading-value" label="Glucose value (mg/dl)" error={errors.value} hint={`Whole number between ${MIN_VALUE} and ${MAX_VALUE}.`}>
+      <Field
+        id="reading-value" label="Glucose value (mg/dl)" error={errors.value}
+        hint={range ? `Your target for this slot: ${range.low}–${range.high} mg/dl.` : `Whole number between ${MIN_VALUE} and ${MAX_VALUE}.`}
+      >
         <div className="relative">
           <Input
             id="reading-value" type="text" inputMode="numeric" autoComplete="off" placeholder="e.g. 112"
@@ -93,11 +100,17 @@ export function ReadingForm({ initial, onSubmit, onCancel, existingForDate = () 
         </div>
       </Field>
 
+      <div className="space-y-2">
+        <Label>Context (optional)</Label>
+        <TagPicker value={form.tags} onChange={set('tags')} label="Reading tags" />
+        {errors.tags && <p role="alert" className="text-[13px] font-medium text-destructive">{errors.tags}</p>}
+      </div>
+
       <Field id="reading-notes" label="Notes (optional)" error={errors.notes}>
         <Input id="reading-notes" placeholder="Before a walk, felt dizzy…" maxLength={280} value={form.notes} onChange={set('notes')} />
       </Field>
 
-      {formError && <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">{formError}</p>}
+      {formError && <p role="alert" className="rounded-md border border-destructive/30 px-3 py-2 text-sm font-medium text-destructive">{formError}</p>}
 
       <div className="flex justify-end gap-2 pt-1">
         {onCancel && <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>}
