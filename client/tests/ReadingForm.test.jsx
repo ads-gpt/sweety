@@ -71,7 +71,7 @@ describe('ReadingForm', () => {
     await pickSlot(user, 'After dinner');
     await user.type(screen.getByLabelText(/glucose value/i), '125');
     await user.click(screen.getByRole('button', { name: /save reading/i }));
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ date: todayISO(), slot: 'after_dinner', value: 125, notes: null }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ date: todayISO(), slot: 'after_dinner', value: 125, notes: null, tags: [] }));
   });
 
   it('shows server-side errors next to the right field', async () => {
