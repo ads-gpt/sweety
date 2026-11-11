@@ -9,17 +9,41 @@ export const SLOTS = [
 
 export const slotLabel = (v) => SLOTS.find((s) => s.value === v)?.label ?? v;
 
+// Same vocabulary as the server (server/src/lib/tags.js).
+export const TAGS = [
+  { value: 'exercise', label: 'Exercise' },
+  { value: 'big_meal', label: 'Big meal' },
+  { value: 'medication', label: 'Medication' },
+  { value: 'illness', label: 'Illness' },
+  { value: 'stress', label: 'Stress' },
+  { value: 'poor_sleep', label: 'Poor sleep' },
+  { value: 'alcohol', label: 'Alcohol' },
+  { value: 'travel', label: 'Travel' },
+];
+export const tagLabel = (v) => TAGS.find((t) => t.value === v)?.label ?? v;
+
 export const MIN_VALUE = 40;
 export const MAX_VALUE = 600;
 export const MAX_PER_DAY = 4;
 
-// Commonly used reference range (mg/dl). Informational only - see README assumptions.
-export const TARGET = { low: 70, high: 180 };
+// Defaults used until the user's own ranges are known. Informational only.
+export const DEFAULT_TARGETS = { fastingLow: 70, fastingHigh: 130, postLow: 70, postHigh: 180 };
 
-export function glucoseStatus(value) {
-  if (value < TARGET.low) return { key: 'low', label: 'Low', color: 'var(--low)' };
-  if (value > TARGET.high) return { key: 'high', label: 'High', color: 'var(--high)' };
-  return { key: 'ok', label: 'In range', color: 'var(--success)' };
+/** Morning (fasting) readings use the fasting range; everything else uses the after-meal range. */
+export const rangeFor = (slot, t = DEFAULT_TARGETS) =>
+  slot === 'morning' ? { low: t.fastingLow, high: t.fastingHigh } : { low: t.postLow, high: t.postHigh };
+
+const STATUS = {
+  low: { key: 'low', label: 'Low', color: 'var(--low)' },
+  ok: { key: 'ok', label: 'In range', color: 'var(--success)' },
+  high: { key: 'high', label: 'High', color: 'var(--high)' },
+};
+
+export const statusMeta = (key) => STATUS[key] ?? STATUS.ok;
+
+export function glucoseStatus(value, slot, targets = DEFAULT_TARGETS) {
+  const { low, high } = rangeFor(slot, targets);
+  return STATUS[value < low ? 'low' : value > high ? 'high' : 'ok'];
 }
 
 /**

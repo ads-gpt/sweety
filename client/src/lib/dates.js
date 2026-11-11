@@ -2,7 +2,13 @@ const pad = (n) => String(n).padStart(2, '0');
 
 /** Local calendar date as YYYY-MM-DD. */
 export const toISO = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-export const todayISO = () => toISO(new Date());
+
+// "Today" follows the signed-in user's own timezone (set from their profile), not the device clock.
+let userTimezone = null;
+export const setTimezone = (tz) => { userTimezone = tz || null; };
+export const browserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+export const todayISO = (now = new Date(), tz = userTimezone) =>
+  tz ? new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now) : toISO(now);
 
 export const parseISO = (iso) => {
   const [y, m, d] = iso.split('-').map(Number);
