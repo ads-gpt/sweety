@@ -41,7 +41,7 @@ export async function recentComments(patientId, { doctorId, limit = 20 } = {}) {
   let extra = '';
   if (doctorId) { params.push(doctorId); extra = ' AND c.doctor_id = $3'; }
   const { rows } = await query(
-    `${SELECT} WHERE c.patient_id = $1${extra} ORDER BY c.created_at DESC LIMIT $2`,
+    `${SELECT} WHERE c.patient_id = $1${extra} ORDER BY c.comment_date DESC, c.created_at DESC LIMIT $2`,
     params,
   );
   return rows.map(present);
