@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, ArrowRight, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Skeleton } from '@/components/ui/primitives';
+import { Button, Badge, Skeleton } from '@/components/ui/primitives';
 import { PageHeader } from '@/components/AppShell';
 import { ReadingDialog } from '@/components/ReadingDialog';
-import { ReadingChart } from '@/components/ReadingChart';
 import { ReportBody } from '@/components/ReportView';
 import { useAuth } from '@/hooks/useAuth';
 import { useAsync } from '@/hooks/useAsync';
@@ -91,13 +90,7 @@ export default function Dashboard() {
         ) : month.error ? (
           <p role="alert" className="text-sm font-medium text-destructive">{month.error.message}</p>
         ) : (
-          <ReportBody report={{ ...month.data, type: 'summary' }} onAdd={() => open()} />
-        )}
-        {month.data && !month.data.empty && (
-          <Card>
-            <CardHeader><CardTitle>Readings this month</CardTitle><CardDescription>Daily average with the 70–180 mg/dl reference band.</CardDescription></CardHeader>
-            <CardContent><ReadingChart readings={month.data.readings} /></CardContent>
-          </Card>
+          <ReportBody report={{ ...month.data, type: 'month-to-date' }} onAdd={() => open()} />
         )}
       </section>
 
