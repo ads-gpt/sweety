@@ -1,10 +1,28 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Button, Field, Input } from '@/components/ui/primitives';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/overlays';
 import { Logo, ThemeToggle } from '@/components/AppShell';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+
+/** Smoothly expands/collapses its content (height + fade) so switching modes doesn't jump. */
+function Collapse({ show, children }) {
+  return (
+    <AnimatePresence initial={false}>
+      {show && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
+          className="-m-1 overflow-hidden p-1"
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -92,10 +110,20 @@ export default function AuthPage() {
 
       <div className="flex flex-col">
         <div className="flex items-center justify-between p-5 lg:justify-end"><Logo className="lg:hidden" /><ThemeToggle /></div>
-        <div className="flex flex-1 items-center justify-center px-6 pb-12">
+        <div className="flex flex-1 items-start justify-center px-6 pb-12 pt-[clamp(1rem,9vh,5.5rem)]">
           <div className="w-full max-w-sm">
-            <h1 className="text-[2.5rem] leading-[1.05]">{mode === 'login' ? 'Welcome back' : 'Create an account'}</h1>
-            <p className="mt-3 text-muted-foreground">{mode === 'login' ? 'Sign in to see your readings.' : 'It takes less than a minute.'}</p>
+            <div className="min-h-[5.25rem]">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                <h1 className="text-[2.5rem] leading-[1.05]">{mode === 'login' ? 'Welcome back' : 'Create an account'}</h1>
+                <p className="mt-3 text-muted-foreground">{mode === 'login' ? 'Sign in to see your readings.' : 'It takes less than a minute.'}</p>
+              </motion.div>
+            </AnimatePresence>
+            </div>
 
             <Tabs value={mode} onValueChange={(m) => { setMode(m); setErrors({}); setFormError(''); }} className="mt-8">
               <TabsList className="w-full">
@@ -104,9 +132,9 @@ export default function AuthPage() {
               </TabsList>
             </Tabs>
 
-            <form onSubmit={submit} noValidate className="mt-7 space-y-5" aria-label={mode === 'login' ? 'Sign in' : 'Sign up'}>
-              {mode === 'signup' && (
-                <>
+            <form onSubmit={submit} noValidate className="mt-7" aria-label={mode === 'login' ? 'Sign in' : 'Sign up'}>
+              <Collapse show={mode === 'signup'}>
+                <div className="space-y-5 pb-5">
                   <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
                     {[['patient', 'Patient'], ['doctor', 'Doctor']].map(([value, label]) => (
                       <button
@@ -121,29 +149,36 @@ export default function AuthPage() {
                   <Field id="name" label="Full name" error={errors.name}>
                     <Input id="name" autoComplete="name" value={form.name} onChange={set('name')} invalid={!!errors.name} placeholder="Jane Doe" />
                   </Field>
-                </>
-              )}
-              <Field id="email" label="Email" error={errors.email}>
-                <Input id="email" type="email" autoComplete="email" value={form.email} onChange={set('email')} invalid={!!errors.email} placeholder="you@example.com" />
-              </Field>
-              <Field id="password" label="Password" error={errors.password} hint={mode === 'signup' ? 'At least 8 characters.' : undefined}>
-                <Input id="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={form.password} onChange={set('password')} invalid={!!errors.password} />
-              </Field>
+                </div>
+              </Collapse>
+              <div className="pb-5">
+                <Field id="email" label="Email" error={errors.email}>
+                  <Input id="email" type="email" autoComplete="email" value={form.email} onChange={set('email')} invalid={!!errors.email} placeholder="you@example.com" />
+                </Field>
+              </div>
+              <div className="pb-5">
+                <Field id="password" label="Password" error={errors.password}>
+                  <Input id="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={form.password} onChange={set('password')} invalid={!!errors.password} />
+                </Field>
+                <Collapse show={mode === 'signup' && !errors.password}>
+                  <p className="pt-2 text-xs text-muted-foreground">At least 8 characters.</p>
+                </Collapse>
+              </div>
 
-              {formError && <p role="alert" className="rounded-md border border-destructive/30 px-3 py-2 text-sm font-medium text-destructive">{formError}</p>}
+              {formError && <p role="alert" className="mb-5 rounded-md border border-destructive/30 px-3 py-2 text-sm font-medium text-destructive">{formError}</p>}
 
               <Button type="submit" size="lg" className="w-full" disabled={busy}>
                 {busy && <Loader2 className="animate-spin" />}{mode === 'login' ? 'Sign in' : 'Create account'}
               </Button>
             </form>
 
-            {mode === 'login' && (
-              <p className="mt-8 text-center text-xs text-muted-foreground">
+            <Collapse show={mode === 'login'}>
+              <p className="pt-8 text-center text-xs text-muted-foreground">
                 Demo accounts:{' '}
                 <button type="button" className="cursor-pointer font-semibold text-foreground underline underline-offset-4" onClick={() => fillDemo('patient')}>patient</button>{' · '}
                 <button type="button" className="cursor-pointer font-semibold text-foreground underline underline-offset-4" onClick={() => fillDemo('doctor')}>doctor</button>
               </p>
-            )}
+            </Collapse>
           </div>
         </div>
       </div>
