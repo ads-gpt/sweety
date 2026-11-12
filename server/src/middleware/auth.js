@@ -1,15 +1,22 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { unauthorized, forbidden } from '../lib/errors.js';
+import { readCookie } from '../lib/cookies.js';
 import { getUser } from '../services/users.js';
 
+/** `v` ties a token to the user's current token_version, so a password change revokes older sessions. */
 export const signToken = (user) =>
-  jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
+  jwt.sign({ sub: user.id, role: user.role, v: user.token_version ?? 0 }, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
 
-/** Verifies the JWT and loads the current user row (so timezone / targets are always fresh). */
-export async function requireAuth(req, _res, next) {
+/** Browsers authenticate with the httpOnly session cookie; API clients may send a Bearer token. */
+const tokenFrom = (req) => {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  return header.startsWith('Bearer ') ? header.slice(7) : readCookie(req);
+};
+
+/** Verifies the token and loads the current user row (so timezone / targets are always fresh). */
+export async function requireAuth(req, _res, next) {
+  const token = tokenFrom(req);
   if (!token) return next(unauthorized());
   let payload;
   try {
@@ -19,7 +26,7 @@ export async function requireAuth(req, _res, next) {
   }
   try {
     const row = await getUser(Number(payload.sub));
-    if (!row) return next(unauthorized());
+    if (!row || (payload.v ?? 0) !== row.token_version) return next(unauthorized('Your session has expired. Please sign in again.'));
     req.user = { ...row, id: row.id, role: row.role };
     next();
   } catch (err) {

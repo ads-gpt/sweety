@@ -12,3 +12,4 @@ export const unauthorized = (message = 'Please sign in to continue.') => new Htt
 export const forbidden = (message = 'You do not have access to this resource.') => new HttpError(403, message);
 export const notFound = (message = 'Not found.') => new HttpError(404, message);
 export const conflict = (message, opts) => new HttpError(409, message, opts);
+export const tooManyRequests = (message, opts) => new HttpError(429, message, { code: 'LOCKED', ...opts });

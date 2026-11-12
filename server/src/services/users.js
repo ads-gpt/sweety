@@ -2,7 +2,7 @@ import { query } from '../db/pool.js';
 import { targetsOf } from '../lib/targets.js';
 
 export const USER_COLS = `id, name, email, role, timezone, fasting_low, fasting_high, post_low, post_high,
-  email_verified_at, doctor_status, license_number, reminder_enabled, reminder_time, reminder_email, reminder_push`;
+  email_verified_at, doctor_status, license_number, reminder_enabled, reminder_time, reminder_email, reminder_push, token_version`;
 
 /** What the client is allowed to see about a user (never the password hash). */
 export const presentUser = (u) => ({
