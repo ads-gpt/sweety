@@ -3,6 +3,7 @@ import { Loader2, CheckCircle2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input } from '@/components/ui/primitives';
 import { PageHeader } from '@/components/AppShell';
+import { Dialog, DialogContent } from '@/components/ui/overlays';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import { browserTimezone, canonicalTimezone } from '@/lib/dates';
@@ -48,6 +49,8 @@ export default function SettingsPage() {
         {isPatient && <RemindersSection user={user} setUser={setUser} />}
         <InstallSection />
         <PasswordSection />
+        <SessionsSection />
+        <DataSection user={user} />
       </div>
     </>
   );
@@ -265,6 +268,87 @@ function InstallSection() {
         </p>
       )}
     </Section>
+  );
+}
+
+function SessionsSection() {
+  const { logout } = useAuth();
+  const [busy, setBusy] = useState(false);
+  return (
+    <Section
+      title="Sessions"
+      description="You stay signed in on this device for up to 7 days. If you used Sweety on a shared or lost device, sign out everywhere."
+      footer={
+        <Button
+          variant="outline" disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try { await api.logoutAll(); await logout(); } catch (e) { toast.error(e.message); setBusy(false); }
+          }}
+        >
+          {busy && <Loader2 className="animate-spin" />}Sign out of all devices
+        </Button>
+      }
+    />
+  );
+}
+
+function DataSection({ user }) {
+  const { setUser } = useAuth();
+  const [downloading, setDownloading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function download() {
+    setDownloading(true);
+    try { await api.exportMyData(); toast.success('Your data was downloaded'); } catch (e) { toast.error(e.message); } finally { setDownloading(false); }
+  }
+
+  async function remove(e) {
+    e.preventDefault();
+    if (!password) return setError('Please enter your password to confirm.');
+    setBusy(true);
+    try {
+      await api.deleteAccount(password);
+      toast.success('Your account was deleted');
+      setUser(null);
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Section
+        title="Your data"
+        description={user.role === 'patient'
+          ? 'Download everything Sweety stores about you (profile, readings, notes, tags, doctors and comments) as a JSON file, or delete your account for good.'
+          : 'Download your profile, patients and comments as a JSON file, or delete your account for good.'}
+        footer={<>
+          <Button variant="outline" onClick={download} disabled={downloading}>{downloading ? <Loader2 className="animate-spin" /> : <Download />}Download my data</Button>
+          <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => { setOpen(true); setPassword(''); setError(''); }}>Delete account…</Button>
+        </>}
+      />
+      <Dialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
+        <DialogContent title="Delete your account?" description={user.role === 'patient'
+          ? 'This permanently deletes your account, every reading and any notes from your doctors. It cannot be undone.'
+          : 'This permanently deletes your account and the comments you wrote. Patients keep their own readings. It cannot be undone.'}>
+          <form onSubmit={remove} noValidate className="space-y-5" aria-label="Delete account">
+            <Field id="delete-password" label="Enter your password to confirm" error={error}>
+              <Input id="delete-password" type="password" autoComplete="current-password" value={password} invalid={!!error} onChange={(e) => { setPassword(e.target.value); setError(''); }} />
+            </Field>
+            <p className="text-xs text-muted-foreground">Tip: download your data first if you want a copy.</p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+              <Button type="submit" variant="destructive" disabled={busy}>{busy && <Loader2 className="animate-spin" />}Delete everything</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
