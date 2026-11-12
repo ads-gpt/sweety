@@ -3,10 +3,12 @@
   "private": true,
   "description": "Sweety - blood glucose tracker (Node/Express + PostgreSQL + React)",
   "scripts": {
-    "install:all": "npm --prefix server install && npm --prefix client install",
+    "install:all": "npm --prefix server install && npm --prefix client install && npm --prefix e2e install",
     "server": "npm --prefix server run dev",
     "client": "npm --prefix client run dev",
     "seed": "npm --prefix server run seed",
-    "test": "npm --prefix server test && npm --prefix client test"
+    "test": "npm --prefix server test && npm --prefix client test",
+    "test:e2e": "npm --prefix e2e test",
+    "test:all": "npm test && npm run test:e2e"
   }
 }
