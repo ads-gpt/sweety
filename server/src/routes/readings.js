@@ -5,6 +5,7 @@ import { makeReadingSchema, listQuerySchema } from '../lib/validation.js';
 import { badRequest } from '../lib/errors.js';
 import { SLOT_KEYS } from '../lib/slots.js';
 import { targetsOf, statusOf } from '../lib/targets.js';
+import { glucoseAlert } from '../lib/alerts.js';
 import * as readings from '../services/readings.js';
 
 const router = Router();
@@ -56,13 +57,15 @@ router.get('/readings/:id', asyncHandler(async (req, res) => {
 
 router.post('/readings', asyncHandler(async (req, res) => {
   const body = parse(makeReadingSchema(req.user.timezone), req.body);
-  res.status(201).json({ reading: await readings.createReading(req.user.id, body) });
+  const reading = await readings.createReading(req.user.id, body);
+  res.status(201).json({ reading, alert: glucoseAlert(reading.value, reading.slot, targetsOf(req.user)) });
 }));
 
 router.put('/readings/:id', asyncHandler(async (req, res) => {
   const id = idParam(req);
   const body = parse(makeReadingSchema(req.user.timezone), req.body);
-  res.json({ reading: await readings.updateReading(req.user.id, id, body) });
+  const reading = await readings.updateReading(req.user.id, id, body);
+  res.json({ reading, alert: glucoseAlert(reading.value, reading.slot, targetsOf(req.user)) });
 }));
 
 router.delete('/readings/:id', asyncHandler(async (req, res) => {
