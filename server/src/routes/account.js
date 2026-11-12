@@ -1,9 +1,14 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import { query } from '../db/pool.js';
+import { clearSessionCookie } from '../lib/cookies.js';
+import { trySendMail } from '../lib/mailer.js';
+import { accountDeletedEmail } from '../lib/emails.js';
+import { exportUserData } from '../services/dataExport.js';
 import { config } from '../config.js';
 import { asyncHandler, parse } from '../middleware/error.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { settingsSchema, emailSchema, pushSubscriptionSchema } from '../lib/validation.js';
+import { settingsSchema, emailSchema, pushSubscriptionSchema, deleteAccountSchema } from '../lib/validation.js';
 import { badRequest, notFound, forbidden } from '../lib/errors.js';
 import { invalidateReports } from '../lib/cache.js';
 import { pushEnabled } from '../lib/push.js';
@@ -42,6 +47,30 @@ router.patch('/me/settings', asyncHandler(async (req, res) => {
   );
   await invalidateReports(u.id); // reports embed the user's targets
   res.json({ user: presentUser(await getUser(u.id)) });
+}));
+
+// ---- Your data: download everything, or delete the account for good ----
+router.get('/me/export', asyncHandler(async (req, res) => {
+  const data = await exportUserData(req.user);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="sweety-data.json"');
+  res.send(JSON.stringify(data, null, 2));
+}));
+
+router.delete('/me', asyncHandler(async (req, res) => {
+  const { password } = parse(deleteAccountSchema, req.body);
+  const { rows } = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+  if (!(await bcrypt.compare(password, rows[0].password_hash))) {
+    throw badRequest('Your password is incorrect.', { field: 'password' });
+  }
+  // A doctor's comments disappear with the account, so patients' cached reports must be refreshed.
+  const affected = (await query('SELECT DISTINCT patient_id FROM doctor_comments WHERE doctor_id = $1', [req.user.id])).rows;
+  // Readings, comments, shares, tokens and push subscriptions are removed by ON DELETE CASCADE.
+  await query('DELETE FROM users WHERE id = $1', [req.user.id]);
+  await Promise.all([req.user.id, ...affected.map((r) => r.patient_id)].map((id) => invalidateReports(id)));
+  clearSessionCookie(res);
+  trySendMail({ to: req.user.email, ...accountDeletedEmail({ name: req.user.name }) });
+  res.status(204).end();
 }));
 
 // ---- Care team: a patient chooses which verified doctors can see their data ----

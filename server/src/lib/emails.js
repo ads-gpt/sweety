@@ -117,3 +117,15 @@ export function doctorStatusEmail({ name, license, verified }) {
     }),
   };
 }
+
+export function accountDeletedEmail({ name }) {
+  return {
+    subject: 'Your Sweety account has been deleted',
+    text: `Hi ${name},\n\nYour Sweety account and all of its readings have been permanently deleted. If you didn't do this, contact us right away.`,
+    html: shell({
+      preheader: 'Your Sweety account and data have been deleted.',
+      heading: 'Your account was deleted',
+      bodyHtml: p(`Hi ${escapeHtml(name)},`) + p('Your Sweety account and all of its readings have been permanently deleted.') + p("If you didn't do this, contact us right away.", true),
+    }),
+  };
+}
