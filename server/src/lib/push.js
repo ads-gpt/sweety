@@ -1,6 +1,7 @@
 import * as webpush from 'web-push';
 import { config } from '../config.js';
 import { query } from '../db/pool.js';
+import { logger } from './logger.js';
 
 export const pushEnabled = Boolean(config.vapidPublicKey && config.vapidPrivateKey);
 if (pushEnabled) webpush.setVapidDetails(config.vapidSubject, config.vapidPublicKey, config.vapidPrivateKey);
@@ -17,7 +18,7 @@ export async function sendPush(userId, payload) {
     } catch (err) {
       // 404/410 = the browser unsubscribed; drop the dead subscription.
       if (err.statusCode === 404 || err.statusCode === 410) await query('DELETE FROM push_subscriptions WHERE id = $1', [s.id]);
-      else console.error('[push] failed:', err.statusCode || err.message);
+      else logger.error({ status: err.statusCode, err: err.message }, 'push failed');
     }
   }
   return delivered;

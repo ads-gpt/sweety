@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { MAX_READINGS_PER_DAY } from '../lib/slots.js';
 import { trySendMail } from '../lib/mailer.js';
 import { reminderEmail } from '../lib/emails.js';
+import { logger } from '../lib/logger.js';
 import { sendPush } from '../lib/push.js';
 
 const QUEUE = 'sweety-reminders';
@@ -39,7 +40,7 @@ export async function findDueReminders(now = new Date()) {
 }
 
 /** Find due users, notify them on the channels they chose, and mark them reminded for the day. */
-export async function runReminderJob({ now = new Date(), mail = trySendMail, push = sendPush, log = console.log } = {}) {
+export async function runReminderJob({ now = new Date(), mail = trySendMail, push = sendPush, log = (msg) => logger.info(msg) } = {}) {
   const due = await findDueReminders(now);
   const results = [];
   for (const u of due) {
@@ -64,16 +65,16 @@ export async function runReminderJob({ now = new Date(), mail = trySendMail, pus
  */
 export async function startReminderJobs() {
   if (!config.redisUrl) {
-    const timer = setInterval(() => runReminderJob().catch((e) => console.error('[reminders]', e.message)), config.reminderIntervalMs);
+    const timer = setInterval(() => runReminderJob().catch((e) => logger.error({ err: e.message }, 'reminder job failed')), config.reminderIntervalMs);
     timer.unref();
-    console.log(`[reminders] running in-process every ${Math.round(config.reminderIntervalMs / 60000)} min (set REDIS_URL to use BullMQ).`);
+    logger.info(`reminders: running in-process every ${Math.round(config.reminderIntervalMs / 60000)} min (set REDIS_URL to use BullMQ)`);
     return { close: async () => clearInterval(timer) };
   }
   const connection = { url: config.redisUrl, maxRetriesPerRequest: null };
   const queue = new Queue(QUEUE, { connection });
   await queue.upsertJobScheduler('reminder-check', { pattern: config.reminderCron }, { name: 'reminder-check' });
   const worker = new Worker(QUEUE, async () => ({ reminded: (await runReminderJob()).length }), { connection });
-  worker.on('failed', (_job, err) => console.error('[reminders] job failed:', err.message));
-  console.log(`[reminders] BullMQ schedule "${config.reminderCron}"`);
+  worker.on('failed', (_job, err) => logger.error({ err: err.message }, 'reminder job failed'));
+  logger.info(`reminders: BullMQ schedule "${config.reminderCron}"`);
   return { queue, worker, close: async () => { await worker.close(); await queue.close(); } };
 }

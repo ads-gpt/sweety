@@ -1,4 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { config } from '../config.js';
+import { logger } from './logger.js';
 
 /** In tests, outgoing mail is captured here instead of being sent. */
 export const outbox = [];
@@ -34,13 +37,19 @@ export async function sendMail(mail) {
     outbox.push(mail);
     return;
   }
+  if (config.mailOutboxDir) {
+    // Development / end-to-end tests: a JSON line per email that scripts can read back.
+    fs.mkdirSync(config.mailOutboxDir, { recursive: true });
+    fs.appendFileSync(path.join(config.mailOutboxDir, 'outbox.jsonl'), JSON.stringify({ at: new Date().toISOString(), ...mail }) + '\n');
+    return;
+  }
   if (!isMailConfigured()) {
     // Dev fallback: show the email (and any link in it) in the server console.
-    console.log(`\n[mail] To: ${mail.to}\n[mail] Subject: ${mail.subject}\n${mail.text}\n`);
+    logger.info({ to: mail.to, subject: mail.subject }, `email not sent (no MAILGUN_API_KEY)\n${mail.text}`);
     return;
   }
   await sendViaMailgun(mail);
 }
 
 /** Fire-and-forget wrapper: a mail failure must never break the request that triggered it. */
-export const trySendMail = (mail) => sendMail(mail).catch((err) => console.error('[mail] failed:', err.message));
+export const trySendMail = (mail) => sendMail(mail).catch((err) => logger.error({ err: err.message, to: mail.to }, 'email failed'));

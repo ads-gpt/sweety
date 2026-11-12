@@ -1,5 +1,6 @@
 import { ZodError } from 'zod';
 import { HttpError } from '../lib/errors.js';
+import { logger } from '../lib/logger.js';
 
 /** Parse request data with a zod schema; the first issue becomes a 400 with a clear message. */
 export function parse(schema, data) {
@@ -20,7 +21,7 @@ export function notFoundHandler(_req, _res, next) {
 }
 
 // eslint-disable-next-line no-unused-vars
-export function errorHandler(err, _req, res, _next) {
+export function errorHandler(err, req, res, _next) {
   if (err instanceof ZodError) err = zodToHttp(err);
   if (err.type === 'entity.parse.failed') err = new HttpError(400, 'Invalid JSON body.');
   if (err instanceof HttpError) {
@@ -33,6 +34,7 @@ export function errorHandler(err, _req, res, _next) {
   if (err.code === '23505' && err.constraint?.includes('email')) {
     return res.status(409).json({ error: { message: 'An account with this email already exists.', field: 'email', code: 'EMAIL_TAKEN' } });
   }
-  console.error(err);
-  res.status(500).json({ error: { message: 'Something went wrong on our side. Please try again.' } });
+  // Unexpected: log with the request id so a user-reported id can be matched to the stack trace.
+  (req.log ?? logger).error({ err }, 'unhandled error');
+  res.status(500).json({ error: { message: 'Something went wrong on our side. Please try again.', requestId: req.id } });
 }
