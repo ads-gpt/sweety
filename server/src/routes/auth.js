@@ -44,18 +44,20 @@ router.post('/auth/signup', asyncHandler(async (req, res) => {
   }
 }));
 
-const lockedMessage = (until) => {
-  const minutes = Math.max(1, Math.ceil((new Date(until) - Date.now()) / 60000));
+// Remaining lock time is measured by the database (its own clock), so app/DB clock skew can't distort it.
+const lockedMessage = (seconds) => {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
   return `Too many failed sign-in attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}, or reset your password.`;
 };
+const LOCK_SECONDS = 'GREATEST(EXTRACT(EPOCH FROM (locked_until - now())), 0)';
 
 router.post('/auth/login', asyncHandler(async (req, res) => {
   const { email, password } = parse(loginSchema, req.body);
-  const { rows } = await query('SELECT id, password_hash, locked_until FROM users WHERE lower(email) = $1', [email]);
+  const { rows } = await query(`SELECT id, password_hash, ${LOCK_SECONDS} AS lock_secs FROM users WHERE lower(email) = $1`, [email]);
   const found = rows[0];
 
   // A locked account refuses even the correct password until the lock expires (or the password is reset).
-  if (found?.locked_until && new Date(found.locked_until) > new Date()) throw tooManyRequests(lockedMessage(found.locked_until));
+  if (found && Number(found.lock_secs) > 0) throw tooManyRequests(lockedMessage(Number(found.lock_secs)));
 
   const ok = found && (await bcrypt.compare(password, found.password_hash));
   if (!ok) {
@@ -64,10 +66,10 @@ router.post('/auth/login', asyncHandler(async (req, res) => {
         `UPDATE users SET
            failed_logins = CASE WHEN failed_logins + 1 >= $2 THEN 0 ELSE failed_logins + 1 END,
            locked_until  = CASE WHEN failed_logins + 1 >= $2 THEN now() + ($3 || ' minutes')::interval ELSE locked_until END
-         WHERE id = $1 RETURNING locked_until`,
+         WHERE id = $1 RETURNING ${LOCK_SECONDS} AS lock_secs`,
         [found.id, config.maxFailedLogins, String(config.lockMinutes)],
       );
-      if (r[0].locked_until && new Date(r[0].locked_until) > new Date()) throw tooManyRequests(lockedMessage(r[0].locked_until));
+      if (Number(r[0].lock_secs) > 0) throw tooManyRequests(lockedMessage(Number(r[0].lock_secs)));
     }
     // Same message for unknown email and wrong password (no account enumeration).
     throw unauthorized('Incorrect email or password.');
