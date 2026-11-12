@@ -32,6 +32,9 @@ services:
       JWT_SECRET: change-me-in-real-deployments
       CLIENT_ORIGIN: http://localhost:8080
       PORT: 4000
+      NODE_ENV: production   # secure cookies, JSON logs, no file mail outbox
+      COOKIE_SECURE: "false"   # the compose stack serves plain HTTP; set true behind HTTPS
+      LOG_LEVEL: info
       # Optional: set these in your shell or a .env file next to this compose file
       MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
       FROM_EMAIL: ${FROM_EMAIL:-sweety@mx.adarsh.run}

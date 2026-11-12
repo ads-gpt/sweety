@@ -1,5 +1,7 @@
 # Sweety – Blood Glucose Tracker
 
+[![CI](https://github.com/ads-gpt/sweety/actions/workflows/ci.yml/badge.svg)](https://github.com/ads-gpt/sweety/actions/workflows/ci.yml)
+
 Sweety lets a diabetes patient record up to **4 blood-glucose readings a day** (Morning fasting, After breakfast, After lunch, After dinner) and view **daily, month-to-date and monthly reports**.
 
 **Stack:** Node.js + Express API · PostgreSQL · React (Vite) · Tailwind CSS v4 with shadcn-style components · Recharts · Mailgun (email) · Web Push · Redis + BullMQ (optional)
@@ -39,6 +41,12 @@ More screenshots (login, validation errors, duplicate slot, readings, settings, 
 - **Account basics.** Email verification, forgot / reset password, change password, and **verified doctor accounts** (doctors register with a registration number and are approved by an admin before patients can share with them).
 - **Real reminders** by email (Mailgun) and/or web push, at the time the user chooses, in their own timezone, only if readings are missing.
 - **Installable PWA** with an offline app shell, home-screen icon and push notifications.
+- **Low-glucose alert.** Saving a reading below your target (or under 54 mg/dl, treated as urgent) immediately shows a "rule of 15" treatment plan and offers a 15-minute recheck timer. The server decides, so every client gets the same alert.
+- **Security hardening.** httpOnly session cookie (no token in `localStorage`), CSRF guard, account lockout after repeated failed sign-ins, sessions revoked on password change or "sign out of all devices", and a strict Content-Security-Policy. See [Security](#security).
+- **Your data, your call.** Download everything Sweety stores about you as JSON, or permanently delete your account (password-confirmed).
+- **API documentation.** OpenAPI spec and Swagger UI at `/api/docs`, kept honest by a test that compares the spec with the real routes.
+- **Structured logging.** One JSON log line per request with a request id (`X-Request-Id`), secrets redacted, graceful shutdown.
+- **CI and end-to-end tests.** GitHub Actions runs the server, client and Playwright suites on every push.
 - Light / dark mode, responsive layout, toasts, skeleton loaders, rate-limited auth routes.
 
 ## Install
@@ -47,7 +55,7 @@ Requires **Node.js 20+** and a PostgreSQL 14+ database.
 
 ```bash
 git clone <this repo> && cd sweety
-npm run install:all          # installs server + client dependencies
+npm run install:all          # installs server, client and e2e dependencies
 cp server/.env.example server/.env
 ```
 
@@ -115,30 +123,60 @@ Without `MAILGUN_API_KEY` nothing is sent: each email is printed to the API cons
 
 **Reminders** run every 10 minutes: for each patient whose chosen reminder time (in their own timezone) has arrived and who has logged fewer than four readings that day, one reminder is sent per day on the channels they selected. With `REDIS_URL` set this is a BullMQ repeatable job; without it, a plain in-process timer is used.
 
+## Security
+
+| Area | What it does |
+|---|---|
+| **Sessions** | The login token lives in an `httpOnly`, `SameSite=Lax` cookie (`Secure` in production), so page scripts - and therefore XSS - can never read it. API clients may use `Authorization: Bearer`. |
+| **CSRF** | On top of `SameSite=Lax`, state-changing requests must be JSON and, if they carry an `Origin` header, it must be the web app's. CORS only allows the app origin (with credentials). |
+| **Brute force** | 5 wrong passwords lock the account for 15 minutes (even the right password is refused meanwhile); a password reset clears it. Auth routes are also rate-limited per IP. Unknown emails get the same "Incorrect email or password" and are never locked. |
+| **Session revocation** | Tokens carry a version. Changing or resetting a password, or "Sign out of all devices", invalidates every other session. |
+| **Content-Security-Policy** | `script-src 'self'` (no inline scripts), no framing, no foreign form targets, plus `nosniff`, `Referrer-Policy` and `Permissions-Policy`. Served by nginx; `vite preview` uses the same headers. A test fails if the two drift apart. |
+| **Data hygiene** | API responses are `Cache-Control: no-store`; logs record paths only (no query strings), with cookies and auth headers redacted; CSV export neutralises spreadsheet formulas; all email HTML is escaped. |
+| **Privacy** | Settings → *Your data*: download everything as JSON, or permanently delete the account (password-confirmed; readings, comments and shares are removed). |
+
+Configuration (all optional): `COOKIE_SECURE`, `MAX_FAILED_LOGINS`, `LOCK_MINUTES`, `AUTH_RATE_LIMIT`, `LOG_LEVEL` - see `server/.env.example`.
+
+## API documentation
+
+With the API running, open **http://localhost:4000/api/docs** (Swagger UI). The raw spec is at `/api/docs/openapi.json`. It is written in `server/src/openapi.js` and `tests/openapi.test.js` fails if a route is added, removed or renamed without updating the spec.
+
 ## Tests
 
 ```bash
-npm test                         # server + client
+npm test                         # server + client unit/integration tests
+npm run test:e2e                 # end-to-end browser tests (Playwright)
 npm --prefix server test         # API integration + unit tests
 npm --prefix client test         # React Testing Library tests
 ```
 
 Server integration tests run against a **real PostgreSQL**. By default a throwaway embedded instance is started automatically (no setup). To use your own DB instead set `TEST_DATABASE_URL` (the tests truncate its tables, so use a dedicated database).
 
-What is covered: report date ranges (incl. January→December and leap-year February), stats rounding, every validation rule and its message, the 4-per-day cap (including concurrent requests), edit/delete, user isolation, pagination, all three reports and the empty state; **per-user timezones, target ranges, time in range and A1c, tags/search/CSV (incl. formula-injection safety), email verification, password reset (single-use and expiry), doctor verification and comments, reminder scheduling across timezones, push subscriptions, and the Mailgun request format**. Frontend: the reading form (validation, tags, server-error mapping, submit), target-aware status, timezone-aware dates and the report summary.
+**End-to-end tests** (`e2e/`) drive a real browser against the production build. The suite is self-contained: it creates and seeds its own `sweety_e2e` database, starts its own API (port 4100) and `vite preview` (port 4173), and reads emails from a file outbox instead of sending them. It needs a PostgreSQL reachable at `E2E_DATABASE_URL` (default `postgres://sweety:sweety@localhost:5432/sweety_e2e`, i.e. the same server as the dev database) and a browser:
+
+```bash
+cd e2e
+npx playwright install chromium      # once - or use an installed Chrome: PW_CHANNEL=chrome npm test
+npm test
+```
+
+It covers sign-up and email verification, password reset, lockout, every validation message, tags / search / pagination / CSV, the low-glucose alert, all three reports and print-to-PDF, settings, data export and account deletion, the doctor flow, security (cookie flags, CSRF, XSS payloads, CSP violations, API headers), the Swagger page, the installable app (manifest, offline shell) and a phone-sized layout. **CI** (`.github/workflows/ci.yml`) runs the server, client and e2e suites on every push and pull request.
+
+What the unit/integration tests cover: report date ranges (incl. January→December and leap-year February), stats rounding, every validation rule and its message, the 4-per-day cap (including concurrent requests), edit/delete, user isolation, pagination, all three reports and the empty state; **per-user timezones, target ranges, time in range and A1c, tags/search/CSV (incl. formula-injection safety), email verification, password reset (single-use and expiry), doctor verification and comments, reminder scheduling across timezones, push subscriptions, the Mailgun request format, cookie sessions, CSRF, lockout, session revocation, data export and deletion, low-glucose alerts, and spec-vs-routes parity for the OpenAPI document**. Frontend: the reading form (validation, tags, server-error mapping, submit), target-aware status, timezone-aware dates and the report summary.
 
 ## API overview
 
-All routes are under `/api`; send `Authorization: Bearer <token>`.
+All routes are under `/api`. Browsers authenticate with the session cookie; other clients can send `Authorization: Bearer <token>` (the `token` in the login response). The full, interactive reference is at `/api/docs`.
 
 | Method & path | Purpose |
 |---|---|
-| `POST /auth/signup` `{name,email,password,role?,timezone?,licenseNumber?}` · `POST /auth/login` · `GET /auth/me` | Auth |
+| `POST /auth/signup` `{name,email,password,role?,timezone?,licenseNumber?}` · `POST /auth/login` · `POST /auth/logout` · `POST /auth/logout-all` · `GET /auth/me` | Auth and sessions |
+| `GET /me/export` · `DELETE /me` `{password}` | Download all your data / delete your account |
 | `POST /auth/verify-email` · `POST /auth/resend-verification` | Email verification |
 | `POST /auth/forgot-password` · `POST /auth/reset-password` · `POST /auth/change-password` | Passwords |
 | `PATCH /me/settings` | Name, timezone, target ranges, reminder preferences |
 | `GET /readings?page&limit&date&from&to&tag&q` | Your readings, newest first, paginated |
-| `POST /readings` · `PUT /readings/:id` · `DELETE /readings/:id` | Create / edit / delete (`{date, slot, value, notes?, tags?}`) |
+| `POST /readings` · `PUT /readings/:id` · `DELETE /readings/:id` | Create / edit / delete (`{date, slot, value, notes?, tags?}`); responses include an `alert` when the value is low |
 | `GET /readings/export.csv` | CSV export (same filters) |
 | `GET /reports/daily \| month-to-date \| monthly?date=YYYY-MM-DD` | Report incl. time in range, estimated A1c, targets and doctor comments (defaults to today in your timezone). Doctors add `&patientId=` |
 | `GET/POST /me/doctors` · `DELETE /me/doctors/:id` | Patient shares/revokes access for a verified doctor |
@@ -153,7 +191,9 @@ Slots: `morning`, `after_breakfast`, `after_lunch`, `after_dinner`. Errors look 
 ```
 server/  Express API  (routes → services → pg; lib = dates/stats/targets/validation/cache/mail/push; jobs = reminders)
 client/  React app    (pages, components, components/ui = shadcn-style primitives, lib, hooks; public/ = PWA files)
+e2e/     Playwright end-to-end tests (own database, API and web server)
 docs/    screenshots
+.github/workflows/ci.yml   CI: server, client and e2e jobs
 ```
 
 ## Notes
@@ -167,10 +207,12 @@ docs/    screenshots
 - **Target ranges** default to common general guidance (fasting 70–130, after meals 70–180 mg/dl) and are editable per user. Morning readings count as "fasting"; the other three slots use the after-meal range. The estimated HbA1c is a rough estimate from average glucose, not a lab result.
 - **bcrypt:** uses `bcryptjs` (pure JS, same hash format) to avoid native build problems on Windows.
 - **Reminders** are sent once per day within three hours after the chosen time, so a server that was down all evening doesn't nag at midnight.
-- Tokens are stored in `localStorage` for simplicity.
+- **Low glucose:** "very low" is under 54 mg/dl; "low" is below the person's own low target for that slot. The treatment steps are the commonly taught "rule of 15" and are guidance, not a prescription. The recheck timer only fires while Sweety is open.
+- **Lockout:** the "too many attempts" message tells the owner of an account that it exists and is locked. I accepted that trade-off because a clear message (and a reset link that clears the lock) is better for real users than a silent failure; unknown emails still get the generic answer.
+- **CSRF:** relies on `SameSite=Lax`, an Origin check and JSON-only bodies rather than per-request tokens. That is sufficient for this single-origin app; a multi-origin deployment would want double-submit tokens.
 
 ### What I'd improve with more time
-- Refresh tokens / httpOnly cookies and an automated doctor-registration check; an admin UI instead of a CLI.
+- Refresh-token rotation, two-factor sign-in, and an automated doctor-registration check; an admin UI instead of a CLI.
 - Weekly view, mmol/L display toggle, and richer insights (patterns by time of day or tag).
 - SMS / WhatsApp reminders, and per-user quiet hours.
 - Code-splitting the client bundle, Playwright end-to-end tests in CI, and an OpenAPI spec for the API.
