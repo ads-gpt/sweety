@@ -1,10 +1,6 @@
-const TOKEN_KEY = 'sweety-token';
-
-export const tokenStore = {
-  get: () => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } },
-  set: (t) => { try { localStorage.setItem(TOKEN_KEY, t); } catch { /* ignore */ } },
-  clear: () => { try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } },
-};
+// The login session lives in an httpOnly cookie that the server sets, so no token is kept in
+// localStorage (page scripts - and therefore XSS - can never read it). fetch() sends the cookie
+// automatically because the app and the API share one origin (Vite proxy in dev, nginx in production).
 
 export class ApiError extends Error {
   constructor(message, { status, field, code } = {}) {
@@ -28,13 +24,16 @@ function buildUrl(path, params) {
   return `/api${path}${qs}`;
 }
 
+// A 401 from these calls is an expected answer ("wrong password", "not signed in yet"), not an expired session.
+const QUIET_401 = ['/auth/login', '/auth/me', '/auth/reset', '/auth/forgot', '/auth/verify', '/auth/signup'];
+
 async function raw(method, path, { body, params } = {}) {
-  const token = tokenStore.get();
   let res;
   try {
     res = await fetch(buildUrl(path, params), {
       method,
-      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      credentials: 'same-origin',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
@@ -43,8 +42,7 @@ async function raw(method, path, { body, params } = {}) {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     const e = data.error || {};
-    const isAuthCall = path.startsWith('/auth/login') || path.startsWith('/auth/reset') || path.startsWith('/auth/forgot') || path.startsWith('/auth/verify');
-    if (res.status === 401 && token && !isAuthCall) onUnauthorized();
+    if (res.status === 401 && !QUIET_401.some((p) => path.startsWith(p))) onUnauthorized();
     throw new ApiError(e.message || 'Something went wrong. Please try again.', { status: res.status, field: e.field, code: e.code });
   }
   return res;
@@ -56,9 +54,22 @@ async function request(method, path, opts) {
   return res.json().catch(() => ({}));
 }
 
+/** Fetch a file through the API (so the cookie is sent) and hand it to the browser as a download. */
+async function download(path, params, filename) {
+  const res = await raw('GET', path, { params });
+  const url = URL.createObjectURL(await res.blob());
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   signup: (body) => request('POST', '/auth/signup', { body }),
   login: (body) => request('POST', '/auth/login', { body }),
+  logout: () => request('POST', '/auth/logout'),
+  logoutAll: () => request('POST', '/auth/logout-all'),
   me: () => request('GET', '/auth/me'),
   verifyEmail: (token) => request('POST', '/auth/verify-email', { body: { token } }),
   resendVerification: () => request('POST', '/auth/resend-verification'),
@@ -67,21 +78,14 @@ export const api = {
   changePassword: (body) => request('POST', '/auth/change-password', { body }),
 
   updateSettings: (body) => request('PATCH', '/me/settings', { body }),
+  exportMyData: () => download('/me/export', undefined, 'sweety-data.json'),
+  deleteAccount: (password) => request('DELETE', '/me', { body: { password } }),
 
   listReadings: (params) => request('GET', '/readings', { params }),
   createReading: (body) => request('POST', '/readings', { body }),
   updateReading: (id, body) => request('PUT', `/readings/${id}`, { body }),
   deleteReading: (id) => request('DELETE', `/readings/${id}`),
-  /** Downloads the CSV through fetch so the auth header is sent, then triggers a file save. */
-  async exportCsv(params) {
-    const res = await raw('GET', '/readings/export.csv', { params });
-    const url = URL.createObjectURL(await res.blob());
-    const a = Object.assign(document.createElement('a'), { href: url, download: 'sweety-readings.csv' });
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  },
+  exportCsv: (params) => download('/readings/export.csv', params, 'sweety-readings.csv'),
 
   report: (type, params) => request('GET', `/reports/${type}`, { params }),
 

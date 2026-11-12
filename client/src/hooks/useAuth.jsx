@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { api, tokenStore, setUnauthorizedHandler } from '@/lib/api';
+import { api, setUnauthorizedHandler } from '@/lib/api';
 import { browserTimezone, setTimezone } from '@/lib/dates';
 import { DEFAULT_TARGETS } from '@/lib/glucose';
 
@@ -7,7 +7,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUserState] = useState(null);
-  const [loading, setLoading] = useState(Boolean(tokenStore.get()));
+  const [loading, setLoading] = useState(true); // the session cookie is httpOnly, so ask the server who we are
 
   // Keep the date helpers in step with the user's own timezone.
   const setUser = useCallback((u) => {
@@ -15,16 +15,18 @@ export function AuthProvider({ children }) {
     setUserState(u);
   }, []);
 
-  const logout = useCallback(() => {
-    tokenStore.clear();
+  // Local sign-out (used when the server says the session is gone).
+  const dropSession = useCallback(() => setUser(null), [setUser]);
+
+  const logout = useCallback(async () => {
+    await api.logout().catch(() => {}); // clears the cookie server-side
     setUser(null);
   }, [setUser]);
 
   useEffect(() => {
-    setUnauthorizedHandler(logout);
-    if (!tokenStore.get()) return;
-    api.me().then((r) => setUser(r.user)).catch(logout).finally(() => setLoading(false));
-  }, [logout, setUser]);
+    setUnauthorizedHandler(dropSession);
+    api.me().then((r) => setUser(r.user)).catch(() => setUser(null)).finally(() => setLoading(false));
+  }, [dropSession, setUser]);
 
   const value = useMemo(() => ({
     user,
@@ -33,13 +35,11 @@ export function AuthProvider({ children }) {
     setUser,
     async login(credentials) {
       const r = await api.login(credentials);
-      tokenStore.set(r.token);
       setUser(r.user);
     },
     async signup(data) {
       // The browser's timezone becomes the account's starting timezone (editable in Settings).
       const r = await api.signup({ ...data, timezone: browserTimezone() });
-      tokenStore.set(r.token);
       setUser(r.user);
     },
     async refresh() {
